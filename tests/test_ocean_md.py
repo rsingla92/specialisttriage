@@ -113,6 +113,24 @@ class TestOceanMDServiceLive:
 
         assert result is True
 
+    def test_send_feedback_includes_workup_and_redirect(self):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("app.services.ocean_md.requests.post", return_value=mock_response) as mock_post:
+            self.service.send_feedback(
+                "OCN-001",
+                "Please arrange the following before appointment.",
+                "needs_info",
+                recommended_workup="Urinalysis, urine culture, renal ultrasound",
+                redirect_to=None,
+            )
+
+        call_kwargs = mock_post.call_args.kwargs
+        payload = call_kwargs["json"]
+        assert payload["recommendedWorkup"] == "Urinalysis, urine culture, renal ultrasound"
+        assert "redirectTo" not in payload
+
     def test_send_feedback_failure(self):
         with patch("app.services.ocean_md.requests.post") as mock_post:
             mock_post.side_effect = requests_lib.RequestException("Connection refused")

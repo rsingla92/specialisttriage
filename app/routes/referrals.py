@@ -173,7 +173,13 @@ def send_feedback(referral_id):
         # Send via OceanMD
         if referral.ocean_referral_id:
             ocean = OceanMDService.from_app()
-            sent = ocean.send_feedback(referral.ocean_referral_id, message, decision)
+            sent = ocean.send_feedback(
+                referral.ocean_referral_id,
+                message,
+                decision,
+                recommended_workup=recommended_workup or None,
+                redirect_to=redirect_to or None,
+            )
             fb.delivery_status = "sent" if sent else "failed"
             if not sent:
                 flash(

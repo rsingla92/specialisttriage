@@ -4,9 +4,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
+_DEV_SECRET_KEY = "dev-secret-key-change-in-production"
+
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+    SECRET_KEY = os.environ.get("SECRET_KEY", _DEV_SECRET_KEY)
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", f"sqlite:///{BASE_DIR / 'specialisttriage.db'}"
     )
@@ -37,6 +39,9 @@ class ProductionConfig(Config):
             "SECRET_KEY environment variable must be set for ProductionConfig."
         )
     WTF_CSRF_ENABLED = True
+    # SECRET_KEY must be provided via environment variable in production.
+    # The application factory will raise RuntimeError if the insecure dev default is used.
+    SECRET_KEY = os.environ.get("SECRET_KEY", _DEV_SECRET_KEY)
 
 
 config = {

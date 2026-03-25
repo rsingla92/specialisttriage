@@ -30,7 +30,7 @@
       </ul>
       <div class="d-flex align-items-center gap-3">
         <form action="{{ url_for('referrals.import_referrals') }}" method="post" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-warning btn-sm">
             <i class="bi bi-cloud-download-fill me-1"></i>Import from OceanMD
           </button>

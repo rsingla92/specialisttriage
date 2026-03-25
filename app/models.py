@@ -70,7 +70,7 @@ class Referral(db.Model):
     )  # pending | triaged | accepted | declined | needs_info
     priority = db.Column(
         db.String(20)
-    )  # urgent | high | routine | low | inappropriate
+    )  # urgent | high | routine | low | needs_info | inappropriate
 
     # Timestamps
     received_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)

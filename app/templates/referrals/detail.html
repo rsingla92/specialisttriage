@@ -229,6 +229,7 @@
         <i class="bi bi-hourglass-split text-warning fs-2"></i>
         <p class="mb-2 mt-2">This referral has not been triaged yet.</p>
         <form action="{{ url_for('referrals.retriage', referral_id=referral.id) }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-robot me-1"></i>Run Triage
           </button>
@@ -249,6 +250,7 @@
         </a>
         {% if referral.triage_result %}
         <form action="{{ url_for('referrals.retriage', referral_id=referral.id) }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-outline-secondary w-100">
             <i class="bi bi-arrow-clockwise me-1"></i>Re-run Triage
           </button>

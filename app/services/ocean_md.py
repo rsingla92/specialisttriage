@@ -49,7 +49,7 @@ _MOCK_REFERRALS: list[dict[str, Any]] = [
     },
     {
         "ocean_referral_id": "OCN-2026-002",
-        "patient_first_name": "Patricia",
+        "patient_first_name": "Patrick",
         "patient_last_name": "Nguyen",
         "patient_dob": str(date.today() - timedelta(days=365 * 72)),
         "patient_phn": "9876543211",
@@ -59,7 +59,7 @@ _MOCK_REFERRALS: list[dict[str, Any]] = [
         "referring_physician_fax": "604-555-0202",
         "chief_complaint": "Rising PSA – 6.8 ng/mL up from 4.1 last year",
         "clinical_notes": (
-            "72F with rising PSA over 2 years. DRE: mildly enlarged, no nodule. "
+            "72M with rising PSA over 2 years. DRE: mildly enlarged, no nodule. "
             "Patient concerned about prostate cancer."
         ),
         "relevant_history": "Type 2 diabetes, osteoarthritis",
@@ -182,7 +182,14 @@ class OceanMDService:
             logger.error("OceanMD API error: %s", exc)
             return []
 
-    def send_feedback(self, ocean_referral_id: str, message: str, decision: str) -> bool:
+    def send_feedback(
+        self,
+        ocean_referral_id: str,
+        message: str,
+        decision: str,
+        recommended_workup: str | None = None,
+        redirect_to: str | None = None,
+    ) -> bool:
         """
         Send triage feedback to the referring physician via OceanMD.
 
@@ -196,11 +203,17 @@ class OceanMDService:
             )
             return True
 
+        payload: dict[str, Any] = {"decision": decision, "message": message}
+        if recommended_workup:
+            payload["recommendedWorkup"] = recommended_workup
+        if redirect_to:
+            payload["redirectTo"] = redirect_to
+
         try:
             resp = requests.post(
                 f"{self.base_url}/referrals/{ocean_referral_id}/feedback",
                 headers=self._headers(),
-                json={"decision": decision, "message": message},
+                json=payload,
                 timeout=10,
             )
             resp.raise_for_status()
