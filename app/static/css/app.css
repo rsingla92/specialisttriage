@@ -1,0 +1,45 @@
+/* SpecialistTriage BC – custom styles */
+
+body {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+.navbar-brand {
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+/* Priority colour coding */
+tr[data-priority="urgent"] td:first-child {
+  border-left: 4px solid #dc3545;
+}
+tr[data-priority="high"] td:first-child {
+  border-left: 4px solid #ffc107;
+}
+tr[data-priority="inappropriate"] td:first-child {
+  border-left: 4px solid #6c757d;
+}
+tr[data-priority="needs_info"] td:first-child {
+  border-left: 4px solid #0dcaf0;
+}
+
+/* Score progress bars */
+.progress {
+  border-radius: 4px;
+}
+
+.card {
+  border-radius: 0.5rem;
+}
+
+/* Triage badge sizing */
+.triage-priority-badge {
+  font-size: 1rem;
+}

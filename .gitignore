@@ -63,6 +63,8 @@ db.sqlite3-journal
 
 # Flask stuff:
 instance/
+specialisttriage.db
+
 .webassets-cache
 
 # Scrapy stuff:
