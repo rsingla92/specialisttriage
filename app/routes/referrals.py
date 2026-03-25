@@ -39,7 +39,9 @@ def _run_triage(referral: Referral) -> TriageResult:
         model_version=output.model_version,
     )
     referral.priority = output.recommended_priority
-    referral.status = "triaged"
+    referral.status = (
+        "needs_info" if output.recommended_priority == "needs_info" else "triaged"
+    )
     referral.triaged_at = datetime.now(timezone.utc)
     return tr
 

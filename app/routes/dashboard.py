@@ -21,7 +21,7 @@ def index():
         "urgent": sum(1 for r in referrals if r.priority == "urgent"),
         "high": sum(1 for r in referrals if r.priority == "high"),
         "inappropriate": sum(1 for r in referrals if r.priority == "inappropriate"),
-        "needs_info": sum(1 for r in referrals if r.status == "needs_info"),
+        "needs_info": sum(1 for r in referrals if r.priority == "needs_info" or r.status == "needs_info"),
         "resolved": sum(1 for r in referrals if r.status in ("accepted", "declined")),
     }
 

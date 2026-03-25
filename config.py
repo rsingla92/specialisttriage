@@ -30,6 +30,12 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
+    # In production, SECRET_KEY must be explicitly provided via environment.
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY environment variable must be set for ProductionConfig."
+        )
     WTF_CSRF_ENABLED = True
 
 
