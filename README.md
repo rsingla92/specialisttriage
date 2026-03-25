@@ -52,7 +52,7 @@ flask --app run.py seed-demo
 python run.py
 ```
 
-Then open http://127.0.0.1:5000 and log in with `demo@example.com` / `password123`.
+Then open http://127.0.0.1:5000 and log in with `demo@example.com` using the one-time password printed by `flask --app run.py seed-demo` (the password is shown only once – save it when you run the command).
 
 Click **Import from OceanMD** to load 5 sample BC urology referrals (mock data) and see the auto-triage in action.
 

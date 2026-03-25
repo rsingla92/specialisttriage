@@ -1,7 +1,7 @@
 """Dashboard route."""
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
-from app.models import Referral, TriageResult
+from app.models import Referral
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -22,7 +22,7 @@ def index():
         "high": sum(1 for r in referrals if r.priority == "high"),
         "inappropriate": sum(1 for r in referrals if r.priority == "inappropriate"),
         "needs_info": sum(1 for r in referrals if r.priority == "needs_info" or r.status == "needs_info"),
-        "resolved": sum(1 for r in referrals if r.status in ("accepted", "declined")),
+        "resolved": sum(1 for r in referrals if r.status in ("accepted", "declined", "redirected")),
     }
 
     # Priority sort order for display

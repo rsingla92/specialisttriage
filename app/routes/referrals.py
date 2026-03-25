@@ -181,15 +181,23 @@ def send_feedback(referral_id):
                 redirect_to=redirect_to or None,
             )
             fb.delivery_status = "sent" if sent else "failed"
-            if not sent:
-                flash(
-                    "Feedback saved but could not be delivered via OceanMD – "
-                    "please fax the referring physician directly.",
-                    "warning",
-                )
+        else:
+            # No OceanMD referral available; feedback is saved locally only.
+            fb.delivery_status = "saved"
 
         db.session.commit()
-        flash("Feedback sent to referring physician.", "success")
+
+        # Tailor final message based on delivery status to avoid misleading UX.
+        if fb.delivery_status == "sent":
+            flash("Feedback sent to referring physician.", "success")
+        elif fb.delivery_status == "failed":
+            flash(
+                "Feedback saved but could not be delivered via OceanMD – "
+                "please fax the referring physician directly.",
+                "warning",
+            )
+        else:
+            flash("Feedback saved for referring physician.", "success")
         return redirect(url_for("referrals.detail", referral_id=referral_id))
 
     return render_template("referrals/feedback.html", referral=referral)

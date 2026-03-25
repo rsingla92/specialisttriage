@@ -32,16 +32,13 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    # In production, SECRET_KEY must be explicitly provided via environment.
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    if not SECRET_KEY:
-        raise RuntimeError(
-            "SECRET_KEY environment variable must be set for ProductionConfig."
-        )
-    WTF_CSRF_ENABLED = True
-    # SECRET_KEY must be provided via environment variable in production.
-    # The application factory will raise RuntimeError if the insecure dev default is used.
+    """Configuration for production environment."""
+    # SECRET_KEY is read from the environment; if unset, the insecure
+    # development default will be used. The application factory is
+    # responsible for validating that a secure, non-default SECRET_KEY
+    # is provided when running in production.
     SECRET_KEY = os.environ.get("SECRET_KEY", _DEV_SECRET_KEY)
+    WTF_CSRF_ENABLED = True
 
 
 config = {

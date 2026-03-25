@@ -1,7 +1,7 @@
 """JSON REST API routes for the specialist triage application."""
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
-from app.models import Referral, TriageResult, Feedback
+from app.models import Referral, TriageResult
 
 api_bp = Blueprint("api", __name__)
 
@@ -79,7 +79,9 @@ def stats():
             "by_priority": priority_counts,
             "pending": sum(1 for r in referrals if r.status == "pending"),
             "resolved": sum(
-                1 for r in referrals if r.status in ("accepted", "declined")
+                1
+                for r in referrals
+                if r.status in ("accepted", "declined", "redirected")
             ),
         }
     )

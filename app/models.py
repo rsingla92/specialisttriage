@@ -67,7 +67,7 @@ class Referral(db.Model):
     # Status and triage
     status = db.Column(
         db.String(30), nullable=False, default="pending"
-    )  # pending | triaged | accepted | declined | needs_info
+    )  # pending | triaged | accepted | declined | needs_info | redirected
     priority = db.Column(
         db.String(20)
     )  # urgent | high | routine | low | needs_info | inappropriate

@@ -95,7 +95,7 @@ _STRONGLY_RECOMMENDED_UROLOGY = [
     "urinalysis",
     "psa",
     "ultrasound",
-    "ct",
+    "ct scan",
     "urine culture",
     "creatinine",
     "voiding diary",
