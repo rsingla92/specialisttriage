@@ -167,7 +167,9 @@ class OceanMDService:
         Falls back to mock data when no API key is configured.
         """
         if self._use_mock:
-            return _MOCK_REFERRALS
+            # Return a fresh list with shallow-copied dicts so that callers
+            # can safely mutate the result without affecting global mock data.
+            return [referral.copy() for referral in _MOCK_REFERRALS]
 
         try:
             resp = requests.get(
