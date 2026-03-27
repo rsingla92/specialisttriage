@@ -186,6 +186,9 @@ def send_feedback(referral_id):
         referral.status = decision
         if decision in {"accepted", "declined", "redirected"}:
             referral.resolved_at = datetime.now(timezone.utc)
+        else:
+            # Clear any stale resolution timestamp when moving back to a non-terminal state.
+            referral.resolved_at = None
 
         # Send via OceanMD
         if referral.ocean_referral_id:
