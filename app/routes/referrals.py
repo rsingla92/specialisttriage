@@ -7,6 +7,8 @@ from app.models import Referral, TriageResult, Feedback
 from app.services.triage_engine import triage_referral, ReferralData
 from app.services.ocean_md import OceanMDService
 
+_ALLOWED_DECISIONS = frozenset({"accepted", "declined", "needs_info", "redirected"})
+
 referrals_bp = Blueprint("referrals", __name__)
 
 # Fallback date of birth used when the OceanMD record contains an unparseable value
@@ -53,11 +55,22 @@ def import_referrals():
     ocean = OceanMDService.from_app()
     raw_referrals = ocean.fetch_pending_referrals()
 
+    # Preload all existing ocean_referral_ids in a single query to avoid N+1.
+    incoming_ids = [r.get("ocean_referral_id") for r in raw_referrals if r.get("ocean_referral_id")]
+    existing_ids: set[str] = set()
+    if incoming_ids:
+        existing_ids = {
+            row.ocean_referral_id
+            for row in Referral.query.filter(
+                Referral.ocean_referral_id.in_(incoming_ids)
+            ).with_entities(Referral.ocean_referral_id).all()
+        }
+
     imported = 0
     skipped = 0
     for raw in raw_referrals:
         ocean_id = raw.get("ocean_referral_id")
-        if ocean_id and Referral.query.filter_by(ocean_referral_id=ocean_id).first():
+        if ocean_id and ocean_id in existing_ids:
             skipped += 1
             continue
 
@@ -151,6 +164,9 @@ def send_feedback(referral_id):
             flash("Decision and message are required.", "danger")
             return render_template("referrals/feedback.html", referral=referral)
 
+        if decision not in _ALLOWED_DECISIONS:
+            abort(400)
+
         # Remove old feedback if re-sending
         if referral.feedback:
             db.session.delete(referral.feedback)
@@ -166,9 +182,10 @@ def send_feedback(referral_id):
         )
         db.session.add(fb)
 
-        # Update referral status
+        # Update referral status; only mark resolved_at for terminal decisions.
         referral.status = decision
-        referral.resolved_at = datetime.now(timezone.utc)
+        if decision in {"accepted", "declined", "redirected"}:
+            referral.resolved_at = datetime.now(timezone.utc)
 
         # Send via OceanMD
         if referral.ocean_referral_id:

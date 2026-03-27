@@ -1,8 +1,16 @@
 """Authentication routes: login, logout, register."""
+from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User
+
+
+def _is_safe_redirect_url(target: str) -> bool:
+    """Return True only when *target* is a relative path on the same host."""
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -27,7 +35,9 @@ def login():
             login_user(user, remember=request.form.get("remember_me") == "on")
             next_page = request.args.get("next")
             flash(f"Welcome back, {user.full_name}!", "success")
-            return redirect(next_page or url_for("dashboard.index"))
+            if next_page and _is_safe_redirect_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for("dashboard.index"))
         flash("Invalid email or password.", "danger")
 
     return render_template("auth/login.html")

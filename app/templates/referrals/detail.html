@@ -117,6 +117,8 @@
               <span class="badge bg-success">Delivered via OceanMD</span>
             {% elif referral.feedback.delivery_status == 'failed' %}
               <span class="badge bg-danger">Delivery failed – fax manually</span>
+            {% elif referral.feedback.delivery_status == 'saved' %}
+              <span class="badge bg-secondary">Saved locally (not sent)</span>
             {% else %}
               <span class="badge bg-secondary">Pending</span>
             {% endif %}
