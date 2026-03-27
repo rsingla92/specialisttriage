@@ -1,6 +1,7 @@
 """Dashboard route."""
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
+from app import db
 from app.models import Referral
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -9,21 +10,23 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/dashboard")
 @login_required
 def index():
-    referrals = (
-        Referral.query.filter_by(specialist_id=current_user.id)
-        .order_by(Referral.received_at.desc())
-        .all()
-    )
+    base_q = Referral.query.filter_by(specialist_id=current_user.id)
 
     stats = {
-        "total": len(referrals),
-        "pending": sum(1 for r in referrals if r.status == "pending"),
-        "urgent": sum(1 for r in referrals if r.priority == "urgent"),
-        "high": sum(1 for r in referrals if r.priority == "high"),
-        "inappropriate": sum(1 for r in referrals if r.priority == "inappropriate"),
-        "needs_info": sum(1 for r in referrals if r.priority == "needs_info" or r.status == "needs_info"),
-        "resolved": sum(1 for r in referrals if r.status in ("accepted", "declined", "redirected")),
+        "total": base_q.count(),
+        "pending": base_q.filter_by(status="pending").count(),
+        "urgent": base_q.filter_by(priority="urgent").count(),
+        "high": base_q.filter_by(priority="high").count(),
+        "inappropriate": base_q.filter_by(priority="inappropriate").count(),
+        "needs_info": base_q.filter(
+            db.or_(Referral.priority == "needs_info", Referral.status == "needs_info")
+        ).count(),
+        "resolved": base_q.filter(
+            Referral.status.in_(("accepted", "declined", "redirected"))
+        ).count(),
     }
+
+    referrals = base_q.order_by(Referral.received_at.desc()).all()
 
     # Priority sort order for display
     priority_order = {"urgent": 0, "high": 1, "routine": 2, "low": 3, "needs_info": 4,

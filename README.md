@@ -73,7 +73,7 @@ Copy `.env.example` to `.env` and set:
 python -m pytest -v
 ```
 
-53 tests cover:
+55 tests cover:
 - Triage engine (urgency, completeness, appropriateness, priority classification)
 - OceanMD service (mock mode, live API error handling, response parsing)
 - Flask routes (auth, dashboard, referral import/detail/retriage, feedback, REST API)

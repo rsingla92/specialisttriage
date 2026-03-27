@@ -69,7 +69,7 @@ class TestAuth:
 
     def test_logout(self, client, specialist, app):
         login_specialist(client, app, specialist)
-        resp = client.get("/logout", follow_redirects=True)
+        resp = client.post("/logout", follow_redirects=True)
         assert resp.status_code == 200
 
     def test_register_creates_account(self, client):
@@ -92,7 +92,7 @@ class TestAuth:
 class TestDashboard:
     def test_dashboard_requires_login(self, client):
         resp = client.get("/dashboard")
-        assert resp.status_code in (200, 302)
+        assert resp.status_code == 302
 
     def test_dashboard_accessible_when_logged_in(self, client, specialist, app):
         login_specialist(client, app, specialist)

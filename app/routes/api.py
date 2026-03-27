@@ -1,6 +1,8 @@
 """JSON REST API routes for the specialist triage application."""
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy import func
+from app import db
 from app.models import Referral, TriageResult
 
 api_bp = Blueprint("api", __name__)
@@ -67,21 +69,31 @@ def get_referral(referral_id):
 @api_bp.route("/stats")
 @login_required
 def stats():
-    referrals = Referral.query.filter_by(specialist_id=current_user.id).all()
-    priority_counts: dict[str, int] = {}
-    for r in referrals:
-        key = r.priority or "unclassified"
-        priority_counts[key] = priority_counts.get(key, 0) + 1
+    base_q = Referral.query.filter_by(specialist_id=current_user.id)
+
+    total = base_q.count()
+
+    priority_rows = (
+        db.session.query(
+            db.func.coalesce(Referral.priority, "unclassified"),
+            func.count(Referral.id),
+        )
+        .filter(Referral.specialist_id == current_user.id)
+        .group_by(Referral.priority)
+        .all()
+    )
+    priority_counts: dict[str, int] = {p: c for p, c in priority_rows}
+
+    pending = base_q.filter_by(status="pending").count()
+    resolved = base_q.filter(
+        Referral.status.in_(("accepted", "declined", "redirected"))
+    ).count()
 
     return jsonify(
         {
-            "total": len(referrals),
+            "total": total,
             "by_priority": priority_counts,
-            "pending": sum(1 for r in referrals if r.status == "pending"),
-            "resolved": sum(
-                1
-                for r in referrals
-                if r.status in ("accepted", "declined", "redirected")
-            ),
+            "pending": pending,
+            "resolved": resolved,
         }
     )
