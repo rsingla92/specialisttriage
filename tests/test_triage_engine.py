@@ -102,6 +102,15 @@ class TestCompletenessScoring:
         result = triage_referral(ref)
         assert any("investigation" in m.lower() for m in result.missing_information)
 
+    def test_investigation_word_boundary_no_false_match(self):
+        """Short tokens (e.g. 'psa') must not match as substrings of longer words."""
+        # 'capsaicin' contains 'psa' as a substring but is not a PSA test result
+        ref = make_referral(relevant_investigations="topical capsaicin applied")
+        result = triage_referral(ref)
+        # Without word-boundary matching, 'psa' would be found in 'capsaicin';
+        # with it, investigations should be flagged as missing.
+        assert any("investigation" in m.lower() for m in result.missing_information)
+
 
 class TestAppropriatenessScoring:
     def test_inappropriate_keyword_lowers_score(self):

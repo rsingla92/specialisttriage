@@ -9,6 +9,7 @@ receive actionable feedback.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -115,6 +116,16 @@ def _contains_any(text: str, keywords: list[str]) -> list[str]:
     return [kw for kw in keywords if kw in text]
 
 
+def _word_boundary_match(text: str, phrase: str) -> bool:
+    """Return True if *phrase* appears in *text* at word boundaries.
+
+    Preferred over plain substring search for short abbreviations (e.g. "psa")
+    that could inadvertently match inside longer words (e.g. "capsaicin").
+    """
+    pattern = r"\b" + re.escape(phrase) + r"\b"
+    return bool(re.search(pattern, text))
+
+
 # ---------------------------------------------------------------------------
 # Core triage function
 # ---------------------------------------------------------------------------
@@ -166,7 +177,7 @@ def triage_referral(referral: ReferralData) -> TriageOutput:
     # Check for at least one investigation result in urology referrals
     if referral.specialty_requested.lower() in ("urology", "urologist"):
         found_investigations = [
-            inv for inv in _STRONGLY_RECOMMENDED_UROLOGY if inv in all_text
+            inv for inv in _STRONGLY_RECOMMENDED_UROLOGY if _word_boundary_match(all_text, inv)
         ]
         if not found_investigations:
             missing.append(
