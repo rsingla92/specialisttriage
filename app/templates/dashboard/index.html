@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-0 fw-bold">Referral Dashboard</h1>
+    <p class="text-muted mb-0">{{ current_user.specialty }} &mdash; {{ current_user.clinic_name or 'BC' }}</p>
+  </div>
+</div>
+
+{# --- Stats cards --- #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-light h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold">{{ stats.total }}</div>
+        <div class="text-muted small">Total</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-danger bg-opacity-10 h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-danger">{{ stats.urgent }}</div>
+        <div class="text-muted small">Urgent</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-warning bg-opacity-10 h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-warning">{{ stats.high }}</div>
+        <div class="text-muted small">High Priority</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-info bg-opacity-10 h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-info">{{ stats.needs_info }}</div>
+        <div class="text-muted small">Needs Info</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-secondary bg-opacity-10 h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-secondary">{{ stats.inappropriate }}</div>
+        <div class="text-muted small">Inappropriate</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card text-center border-0 bg-success bg-opacity-10 h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ stats.resolved }}</div>
+        <div class="text-muted small">Resolved</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# --- Referral table --- #}
+{% if referrals %}
+<div class="card shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <h5 class="mb-0">Referrals</h5>
+    <div class="d-flex gap-2">
+      <select id="filterPriority" class="form-select form-select-sm" style="width:auto">
+        <option value="">All priorities</option>
+        <option value="urgent">Urgent</option>
+        <option value="high">High</option>
+        <option value="routine">Routine</option>
+        <option value="low">Low</option>
+        <option value="needs_info">Needs Info</option>
+        <option value="inappropriate">Inappropriate</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" id="referralTable">
+      <thead class="table-light">
+        <tr>
+          <th>Patient</th>
+          <th>Referring Physician</th>
+          <th>Chief Complaint</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Received</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in referrals %}
+        <tr data-priority="{{ r.priority }}">
+          <td>
+            <strong>{{ r.patient_full_name }}</strong>
+            <div class="text-muted small">Age {{ r.patient_age }}</div>
+          </td>
+          <td>
+            {{ r.referring_physician_name }}
+            {% if r.referring_clinic %}
+              <div class="text-muted small">{{ r.referring_clinic }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="text-truncate d-inline-block" style="max-width:280px" title="{{ r.chief_complaint }}">
+              {{ r.chief_complaint }}
+            </span>
+          </td>
+          <td>
+            {% set p = r.priority %}
+            {% if p == 'urgent' %}
+              <span class="badge bg-danger">🚨 Urgent</span>
+            {% elif p == 'high' %}
+              <span class="badge bg-warning text-dark">⚠️ High</span>
+            {% elif p == 'routine' %}
+              <span class="badge bg-primary">Routine</span>
+            {% elif p == 'low' %}
+              <span class="badge bg-secondary">Low</span>
+            {% elif p == 'needs_info' %}
+              <span class="badge bg-info text-dark">Needs Info</span>
+            {% elif p == 'inappropriate' %}
+              <span class="badge bg-dark">Inappropriate</span>
+            {% else %}
+              <span class="badge bg-secondary">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set s = r.status %}
+            {% if s == 'pending' %}
+              <span class="text-muted small">Pending</span>
+            {% elif s == 'triaged' %}
+              <span class="text-info small">Triaged</span>
+            {% elif s == 'accepted' %}
+              <span class="text-success small fw-bold">Accepted</span>
+            {% elif s == 'declined' %}
+              <span class="text-danger small fw-bold">Declined</span>
+            {% elif s == 'needs_info' %}
+              <span class="text-warning small fw-bold">Needs Info</span>
+            {% elif s == 'redirected' %}
+              <span class="text-secondary small fw-bold">Redirected</span>
+            {% else %}
+              <span class="text-muted small">{{ s }}</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {{ r.received_at.strftime('%b %d, %Y') if r.received_at else '—' }}
+          </td>
+          <td>
+            <a href="{{ url_for('referrals.detail', referral_id=r.id) }}"
+               class="btn btn-sm btn-outline-primary">
+              Review <i class="bi bi-chevron-right"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox fs-1 text-muted"></i>
+  <p class="text-muted mt-3 mb-1">No referrals yet.</p>
+  <p class="text-muted small">Click <strong>Import from OceanMD</strong> to pull your pending referrals.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('filterPriority')?.addEventListener('change', function() {
+  const val = this.value;
+  document.querySelectorAll('#referralTable tbody tr').forEach(row => {
+    row.style.display = (!val || row.dataset.priority === val) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

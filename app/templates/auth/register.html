@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Register – SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm mt-4">
+      <div class="card-body p-4">
+        <h2 class="card-title mb-1 fw-bold">
+          <i class="bi bi-person-plus-fill text-primary me-2"></i>Create Account
+        </h2>
+        <p class="text-muted small mb-4">Register as a specialist on SpecialistTriage BC</p>
+
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="full_name" class="form-label">Full name</label>
+            <input type="text" class="form-control" id="full_name" name="full_name"
+                   placeholder="Dr. Jane Smith" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="specialty" class="form-label">Specialty</label>
+            <select class="form-select" id="specialty" name="specialty">
+              {% for s in specialties %}
+                <option value="{{ s }}" {% if s == 'Urology' %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="clinic_name" class="form-label">Clinic / Hospital</label>
+            <input type="text" class="form-control" id="clinic_name" name="clinic_name"
+                   placeholder="Lions Gate Hospital, North Vancouver">
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required minlength="8">
+            <div class="form-text">Minimum 8 characters</div>
+          </div>
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-person-check-fill me-1"></i>Create Account
+          </button>
+        </form>
+
+        <hr>
+        <p class="text-center mb-0 small">
+          Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
