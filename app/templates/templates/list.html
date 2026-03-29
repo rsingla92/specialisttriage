@@ -13,7 +13,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <span class="badge bg-secondary">{{ t.category|replace('_', ' ')|title }}</span>
-            <span class="badge bg-outline-info">{{ t.template_type }}</span>
+            <span class="badge text-bg-info">{{ t.template_type }}</span>
           </div>
         </div>
         <p class="small text-muted mb-0 mt-1">{{ t.body_text[:120] }}{% if t.body_text|length > 120 %}...{% endif %}</p>
@@ -29,7 +29,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <span class="badge bg-primary">{{ t.category|replace('_', ' ')|title }}</span>
-            <span class="badge bg-outline-info">{{ t.template_type }}</span>
+            <span class="badge text-bg-info">{{ t.template_type }}</span>
           </div>
         </div>
         <p class="small mb-0 mt-1">{{ t.body_text[:120] }}{% if t.body_text|length > 120 %}...{% endif %}</p>

@@ -87,7 +87,7 @@ def seed_templates():
             created += 1
 
     db.session.commit()
-    print(f"Created {created} default template(s) ({6 - created} already existed).")
+    print(f"Created {created} default template(s) ({len(defaults) - created} already existed).")
 
 
 if __name__ == "__main__":

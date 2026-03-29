@@ -230,6 +230,9 @@ _CATEGORY_REQUIRED_WORKUP: dict[str, list[tuple[str, list[str]]]] = {
 
 _WORKUP_PENALTY = 10  # completeness deduction per missing workup item
 
+# Public alias for use outside the triage engine (e.g. pathway pages)
+CATEGORY_REQUIRED_WORKUP: dict[str, list[tuple[str, list[str]]]] = _CATEGORY_REQUIRED_WORKUP
+
 
 def detect_missing_workup(category: str, all_text: str) -> list[str]:
     """Return labels for workup items not found in the referral text."""

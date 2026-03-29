@@ -111,13 +111,12 @@ def import_referrals():
         )
         db.session.add(referral)
         try:
-            db.session.begin_nested()  # savepoint so one failure doesn't kill the batch
-            db.session.flush()  # get referral.id for TriageResult FK
-            tr = _run_triage(referral)
-            db.session.add(tr)
+            with db.session.begin_nested():  # savepoint so one failure doesn't kill the batch
+                db.session.flush()  # get referral.id for TriageResult FK
+                tr = _run_triage(referral)
+                db.session.add(tr)
             imported += 1
         except Exception:
-            db.session.rollback()  # rolls back to savepoint, not entire transaction
             continue
 
     db.session.commit()
@@ -259,10 +258,15 @@ def batch_action():
     owned_map = {r.id: r for r in owned}
     rejected_ids = [rid for rid in referral_ids if rid not in owned_map]
 
-    # Load template if provided
+    # Load template if provided; validate ownership (system templates have created_by=None)
     template = None
     if template_id:
-        template = ResponseTemplate.query.get(template_id)
+        template = db.session.get(ResponseTemplate, template_id)
+        if template is None or (
+            template.created_by is not None
+            and template.created_by != current_user.id
+        ):
+            return jsonify({"error": "Invalid template_id"}), 404
 
     ocean = OceanMDService.from_app()
     results = []
@@ -313,18 +317,17 @@ def batch_action():
         # Use savepoint to handle concurrent feedback creation gracefully.
         # The unique constraint on Feedback.referral_id catches the race.
         try:
-            db.session.begin_nested()
-            db.session.add(fb)
+            with db.session.begin_nested():
+                db.session.add(fb)
 
-            referral.status = action_type
-            if action_type in {"accepted", "declined", "redirected"}:
-                referral.resolved_at = datetime.now(timezone.utc)
-            else:
-                referral.resolved_at = None
+                referral.status = action_type
+                if action_type in {"accepted", "declined", "redirected"}:
+                    referral.resolved_at = datetime.now(timezone.utc)
+                else:
+                    referral.resolved_at = None
 
-            db.session.flush()
+                db.session.flush()
         except IntegrityError:
-            db.session.rollback()
             results.append({"id": rid, "status": "skipped", "reason": "already_actioned"})
             continue
 

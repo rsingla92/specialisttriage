@@ -165,6 +165,8 @@ VALID_CATEGORIES = frozenset({
     "uti_recurrent", "erectile_dysfunction", "other",
 })
 
+VALID_TEMPLATE_TYPES = frozenset({"needs_info", "accepted", "declined"})
+
 
 class ResponseTemplate(db.Model):
     """Reusable response templates for specialist feedback by clinical category."""
@@ -177,7 +179,7 @@ class ResponseTemplate(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(30), nullable=False, index=True)
-    template_type = db.Column(db.String(20), nullable=False)  # needs_info | decline | accept
+    template_type = db.Column(db.String(20), nullable=False)  # needs_info | accepted | declined
     body_text = db.Column(db.Text, nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -201,7 +203,7 @@ class BatchAction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     referral_ids = db.Column(db.JSON, nullable=False)
-    action_type = db.Column(db.String(20), nullable=False)  # accept | needs_info | decline
+    action_type = db.Column(db.String(20), nullable=False)  # accepted | needs_info | declined
     template_id = db.Column(
         db.Integer, db.ForeignKey("response_templates.id"), nullable=True
     )

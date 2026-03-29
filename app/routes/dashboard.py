@@ -37,8 +37,6 @@ def index():
         "total": full_q.count(),
         "incomplete": full_q.filter(
             func.json_array_length(Referral.missing_workup) > 0
-        ).count() if db.engine.dialect.name == "sqlite" else full_q.filter(
-            Referral.missing_workup != "[]", Referral.missing_workup.isnot(None)
         ).count(),
         "pending": full_q.filter(
             Referral.status.in_(("pending", "triaged", "needs_info"))

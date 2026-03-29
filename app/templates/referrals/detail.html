@@ -272,10 +272,26 @@
       </div>
     </div>
     <script>
-    fetch('/templates/api?category={{ referral.clinical_category }}&type=needs_info&patient={{ referral.patient_full_name|urlencode }}&specialist={{ current_user.full_name|urlencode }}')
-      .then(r => r.json())
-      .then(d => { if (d.body) document.getElementById('workupMessage').value = d.body; })
-      .catch(() => { document.getElementById('workupMessage').value = 'Template not available. Please write your message.'; });
+    (function () {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const body = new URLSearchParams({
+        category: {{ referral.clinical_category|tojson }},
+        type: 'needs_info',
+        patient: {{ referral.patient_full_name|tojson }},
+        specialist: {{ current_user.full_name|tojson }}
+      });
+      fetch('/templates/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrfToken
+        },
+        body: body.toString()
+      })
+        .then(r => r.json())
+        .then(d => { if (d.body) document.getElementById('workupMessage').value = d.body; })
+        .catch(() => { document.getElementById('workupMessage').value = 'Template not available. Please write your message.'; });
+    })();
     </script>
     {% elif referral.triage_result and referral.triage_result.completeness_score >= 80 %}
     <div class="card shadow-sm mb-4 border-success">

@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models import ResponseTemplate, VALID_CATEGORIES
+from app.models import ResponseTemplate, VALID_CATEGORIES, VALID_TEMPLATE_TYPES
 
 templates_bp = Blueprint("templates", __name__)
 
@@ -36,8 +36,8 @@ def create_template():
     template_type = request.form.get("template_type", "")
     body_text = request.form.get("body_text", "").strip()
 
-    if not body_text or category not in VALID_CATEGORIES:
-        flash("Category and template text are required.", "danger")
+    if not body_text or category not in VALID_CATEGORIES or template_type not in VALID_TEMPLATE_TYPES:
+        flash("Category, template type, and template text are required.", "danger")
         return redirect(url_for("templates.list_templates"))
 
     existing = ResponseTemplate.query.filter_by(
@@ -59,14 +59,24 @@ def create_template():
     return redirect(url_for("templates.list_templates"))
 
 
-@templates_bp.route("/api")
+@templates_bp.route("/api", methods=["GET", "POST"])
 @login_required
 def api_get_template():
     """JSON endpoint for fetching a rendered template."""
-    category = request.args.get("category", "")
-    template_type = request.args.get("type", "needs_info")
-    patient_name = request.args.get("patient", "")
-    specialist_name = request.args.get("specialist", current_user.full_name)
+    if request.method == "POST":
+        params = request.form
+    else:
+        params = request.args
+
+    category = params.get("category", "")
+    template_type = params.get("type", "needs_info")
+    patient_name = params.get("patient", "")
+    specialist_name = params.get("specialist", current_user.full_name)
+
+    if category not in VALID_CATEGORIES:
+        return jsonify({"error": "Invalid category"}), 400
+    if template_type not in VALID_TEMPLATE_TYPES:
+        return jsonify({"error": "Invalid template type"}), 400
 
     tpl = _get_template_for_user(category, template_type)
     if not tpl:

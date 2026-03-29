@@ -1,7 +1,7 @@
 """Public FP pre-referral pathway pages."""
 from flask import Blueprint, render_template, abort
 from app.models import VALID_CATEGORIES
-from app.services.triage_engine import _CATEGORY_REQUIRED_WORKUP
+from app.services.triage_engine import CATEGORY_REQUIRED_WORKUP
 
 pathways_bp = Blueprint("pathways", __name__)
 
@@ -102,7 +102,7 @@ def pathway(category):
     if category not in VALID_CATEGORIES or category == "other":
         abort(404)
 
-    workup_items = _CATEGORY_REQUIRED_WORKUP.get(category, [])
+    workup_items = CATEGORY_REQUIRED_WORKUP.get(category, [])
     guidance = _PRE_REFERRAL_GUIDANCE.get(category, {})
 
     return render_template(
