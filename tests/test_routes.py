@@ -1,7 +1,8 @@
 """Integration tests for the Flask application routes."""
+import json
 import pytest
 from app import create_app, db
-from app.models import User, Referral
+from app.models import User, Referral, ResponseTemplate, Feedback
 
 
 @pytest.fixture()
@@ -271,3 +272,172 @@ class TestAPI:
         assert data["id"] == referral.id
         assert "triage" in data
         assert data["triage"] is not None
+
+    def test_api_referral_has_category(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        resp = client.get("/api/referrals")
+        data = resp.get_json()
+        for r in data["referrals"]:
+            assert "clinical_category" in r
+            assert "missing_workup" in r
+
+    def test_api_stats_has_categories(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        resp = client.get("/api/stats")
+        data = resp.get_json()
+        assert "by_category" in data
+
+
+class TestDashboardCategoryTabs:
+    def test_dashboard_shows_category_tabs(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        assert b"Hematuria" in resp.data
+        assert b"PSA/Prostate" in resp.data
+        assert b"Stones" in resp.data
+
+    def test_dashboard_filters_by_category(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        resp = client.get("/dashboard?category=hematuria")
+        assert resp.status_code == 200
+
+    def test_dashboard_category_counts(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        # Should have at least one referral in some category
+        assert b"badge bg-secondary" in resp.data
+
+
+class TestBatchActions:
+    def _import_and_login(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+        return Referral.query.filter_by(specialist_id=specialist).all()
+
+    def test_batch_accept_multiple(self, client, specialist, app):
+        referrals = self._import_and_login(client, specialist, app)
+        ids = [r.id for r in referrals[:3] if r.clinical_category != "erectile_dysfunction"]
+
+        resp = client.post(
+            "/referrals/batch",
+            data=json.dumps({"referral_ids": ids, "action_type": "accepted"}),
+            content_type="application/json",
+            headers={"X-CSRFToken": self._get_csrf(client)},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "results" in data
+        for r in data["results"]:
+            assert r["status"] in ("sent", "saved", "skipped")
+
+    def test_batch_requires_login(self, client, app):
+        resp = client.post(
+            "/referrals/batch",
+            data=json.dumps({"referral_ids": [1], "action_type": "accepted"}),
+            content_type="application/json",
+        )
+        assert resp.status_code in (302, 401)
+
+    def test_batch_validates_ownership(self, client, specialist, app):
+        self._import_and_login(client, specialist, app)
+
+        # Create another user's referral
+        other = User(email="other@bc.ca", full_name="Other", specialty="Urology",
+                     clinic_name="Other", role="specialist")
+        other.set_password("testpassword")
+        db.session.add(other)
+        db.session.flush()
+        from datetime import date
+        other_ref = Referral(
+            patient_first_name="X", patient_last_name="Y",
+            patient_dob=date(1990, 1, 1), referring_physician_name="Dr Z",
+            chief_complaint="Test", specialist_id=other.id,
+        )
+        db.session.add(other_ref)
+        db.session.commit()
+
+        resp = client.post(
+            "/referrals/batch",
+            data=json.dumps({"referral_ids": [other_ref.id], "action_type": "accepted"}),
+            content_type="application/json",
+            headers={"X-CSRFToken": self._get_csrf(client)},
+        )
+        data = resp.get_json()
+        assert any(r["status"] == "rejected" for r in data["results"])
+
+    def test_batch_skips_already_actioned(self, client, specialist, app):
+        referrals = self._import_and_login(client, specialist, app)
+        ref = referrals[0]
+
+        # Add feedback first
+        fb = Feedback(referral_id=ref.id, specialist_id=specialist,
+                      decision="accepted", message="Test")
+        db.session.add(fb)
+        db.session.commit()
+
+        resp = client.post(
+            "/referrals/batch",
+            data=json.dumps({"referral_ids": [ref.id], "action_type": "needs_info"}),
+            content_type="application/json",
+            headers={"X-CSRFToken": self._get_csrf(client)},
+        )
+        data = resp.get_json()
+        assert any(r.get("reason") == "already_actioned" for r in data["results"])
+
+    def test_batch_rejects_oversized(self, client, specialist, app):
+        self._import_and_login(client, specialist, app)
+        resp = client.post(
+            "/referrals/batch",
+            data=json.dumps({"referral_ids": list(range(101)), "action_type": "accepted"}),
+            content_type="application/json",
+            headers={"X-CSRFToken": self._get_csrf(client)},
+        )
+        assert resp.status_code == 400
+
+    def _get_csrf(self, client):
+        resp = client.get("/dashboard")
+        data = resp.data.decode()
+        import re
+        match = re.search(r'name="csrf-token"\s+content="([^"]+)"', data)
+        if match:
+            return match.group(1)
+        match = re.search(r'name="csrf_token"\s+value="([^"]+)"', data)
+        return match.group(1) if match else ""
+
+
+class TestReferralImportCategories:
+    def test_imported_referrals_have_category(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+
+        referrals = Referral.query.filter_by(specialist_id=specialist).all()
+        for r in referrals:
+            assert r.clinical_category is not None
+
+
+class TestPathways:
+    def test_pathway_index_public(self, client, app):
+        resp = client.get("/pathways")
+        assert resp.status_code == 200
+        assert b"Hematuria" in resp.data
+
+    def test_pathway_valid_category(self, client, app):
+        resp = client.get("/pathways/hematuria")
+        assert resp.status_code == 200
+        assert b"Required Workup" in resp.data
+
+    def test_pathway_invalid_category_404(self, client, app):
+        resp = client.get("/pathways/nonexistent")
+        assert resp.status_code == 404
