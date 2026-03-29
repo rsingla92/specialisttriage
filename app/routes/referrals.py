@@ -2,6 +2,7 @@
 from datetime import datetime, date, timezone
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import Referral, TriageResult, Feedback, ResponseTemplate, BatchAction
 from app.services.triage_engine import triage_referral, ReferralData
@@ -308,13 +309,24 @@ def batch_action():
             message=message,
             batch_action_id=batch.id,
         )
-        db.session.add(fb)
 
-        referral.status = action_type
-        if action_type in {"accepted", "declined", "redirected"}:
-            referral.resolved_at = datetime.now(timezone.utc)
-        else:
-            referral.resolved_at = None
+        # Use savepoint to handle concurrent feedback creation gracefully.
+        # The unique constraint on Feedback.referral_id catches the race.
+        try:
+            db.session.begin_nested()
+            db.session.add(fb)
+
+            referral.status = action_type
+            if action_type in {"accepted", "declined", "redirected"}:
+                referral.resolved_at = datetime.now(timezone.utc)
+            else:
+                referral.resolved_at = None
+
+            db.session.flush()
+        except IntegrityError:
+            db.session.rollback()
+            results.append({"id": rid, "status": "skipped", "reason": "already_actioned"})
+            continue
 
         # Send via OceanMD
         if referral.ocean_referral_id:
