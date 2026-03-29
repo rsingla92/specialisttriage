@@ -44,6 +44,8 @@ class TriageOutput:
     triage_notes: str = ""
     flags: list[str] = field(default_factory=list)
     model_version: str = "rules-v1.0"
+    clinical_category: str = "other"
+    missing_workup: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +129,128 @@ def _word_boundary_match(text: str, phrase: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Clinical category classification (priority order)
+# ---------------------------------------------------------------------------
+
+_CATEGORY_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("hematuria", [
+        "hematuria", "blood in urine", "gross hematuria",
+        "microscopic hematuria", "microhematuria",
+    ]),
+    ("stones", [
+        "kidney stone", "renal calculi", "nephrolithiasis",
+        "ureteral stone", "renal colic", "calculi",
+    ]),
+    ("uti_recurrent", [
+        "recurrent uti", "frequent uti",
+        "recurrent urinary tract infection",
+    ]),
+    ("psa_prostate", [
+        "psa", "prostate", "elevated psa", "rising psa",
+        "bph", "benign prostatic",
+    ]),
+    ("incontinence", [
+        "incontinence", "urinary leakage",
+        "stress incontinence", "urge incontinence",
+    ]),
+    ("erectile_dysfunction", [
+        "erectile dysfunction", "impotence",
+    ]),
+]
+
+# Short tokens that need word-boundary matching to avoid false positives
+_SHORT_TOKENS = frozenset({"psa", "bph", "uti", "ed"})
+
+
+def classify_category(all_text: str) -> str:
+    """Return the primary clinical category for the referral text.
+
+    Categories are checked in priority order (hematuria first, ED last).
+    Returns ``"other"`` when nothing matches.
+    """
+    for category, keywords in _CATEGORY_KEYWORDS:
+        for kw in keywords:
+            if len(kw) <= 3 or kw in _SHORT_TOKENS:
+                if _word_boundary_match(all_text, kw):
+                    return category
+            elif kw in all_text:
+                return category
+    return "other"
+
+
+def _all_matched_categories(all_text: str) -> list[str]:
+    """Return every category that matches (for flagging secondary categories)."""
+    matched = []
+    for category, keywords in _CATEGORY_KEYWORDS:
+        for kw in keywords:
+            if len(kw) <= 3 or kw in _SHORT_TOKENS:
+                if _word_boundary_match(all_text, kw):
+                    matched.append(category)
+                    break
+            elif kw in all_text:
+                matched.append(category)
+                break
+    return matched
+
+
+# ---------------------------------------------------------------------------
+# Per-category missing workup detection
+# ---------------------------------------------------------------------------
+
+_CATEGORY_REQUIRED_WORKUP: dict[str, list[tuple[str, list[str]]]] = {
+    "hematuria": [
+        ("Urinalysis", ["urinalysis", "ua", "urine dip"]),
+        ("Urine cytology", ["urine cytology", "cytology"]),
+        ("Imaging (CT urogram or US KUB)",
+         ["ct urogram", "ct kub", "ultrasound", "us kub", "renal ultrasound", "ct scan"]),
+        ("Serum creatinine", ["creatinine", "egfr"]),
+    ],
+    "psa_prostate": [
+        ("PSA value", ["psa"]),
+        ("DRE findings", ["dre", "digital rectal", "rectal exam"]),
+        ("Prior PSA values", ["prior psa", "previous psa", "psa history"]),
+        ("Family history of prostate cancer", ["family history", "fhx"]),
+    ],
+    "stones": [
+        ("CT KUB imaging", ["ct kub", "ct scan", "ct urogram"]),
+        ("Serum creatinine", ["creatinine", "egfr"]),
+        ("Urinalysis", ["urinalysis", "ua", "urine dip"]),
+    ],
+    "incontinence": [
+        ("Voiding diary", ["voiding diary"]),
+        ("Urinalysis", ["urinalysis", "ua"]),
+        ("Post-void residual", ["post-void residual", "pvr", "post void"]),
+    ],
+    "uti_recurrent": [
+        ("Urine C&S", ["urine culture", "urine c&s", "c&s", "culture and sensitivity"]),
+        ("Imaging (US KUB)", ["ultrasound", "us kub", "renal ultrasound"]),
+        ("Antibiotic history", ["antibiotic", "antimicrobial"]),
+    ],
+}
+
+_WORKUP_PENALTY = 10  # completeness deduction per missing workup item
+
+
+def detect_missing_workup(category: str, all_text: str) -> list[str]:
+    """Return labels for workup items not found in the referral text."""
+    required = _CATEGORY_REQUIRED_WORKUP.get(category, [])
+    missing = []
+    for label, keywords in required:
+        found = False
+        for kw in keywords:
+            if len(kw) <= 3:
+                if _word_boundary_match(all_text, kw):
+                    found = True
+                    break
+            elif kw in all_text:
+                found = True
+                break
+        if not found:
+            missing.append(label)
+    return missing
+
+
+# ---------------------------------------------------------------------------
 # Core triage function
 # ---------------------------------------------------------------------------
 
@@ -155,6 +279,26 @@ def triage_referral(referral: ReferralData) -> TriageOutput:
     )
 
     # ------------------------------------------------------------------
+    # 0. Clinical classification
+    # ------------------------------------------------------------------
+    output.clinical_category = classify_category(all_text)
+    output.missing_workup = detect_missing_workup(output.clinical_category, all_text)
+
+    # Flag secondary categories if multiple match
+    all_cats = _all_matched_categories(all_text)
+    if len(all_cats) > 1:
+        secondary = [c for c in all_cats if c != output.clinical_category]
+        output.flags.append(
+            f"ℹ️ Also matches: {', '.join(secondary)}"
+        )
+
+    # Flag erectile dysfunction as potentially inappropriate per committee
+    if output.clinical_category == "erectile_dysfunction":
+        output.flags.append(
+            "⚠️ ED referral – typically managed in primary care. Review before accepting."
+        )
+
+    # ------------------------------------------------------------------
     # 1. Completeness scoring
     # ------------------------------------------------------------------
     completeness = 100
@@ -174,10 +318,14 @@ def triage_referral(referral: ReferralData) -> TriageOutput:
             missing.append(label)
             completeness -= _REQUIRED_FIELD_PENALTY
 
-    # Check for at least one investigation result in urology referrals
-    if referral.specialty_requested.lower() in ("urology", "urologist"):
+    # Per-category workup check replaces generic investigation check
+    if output.clinical_category != "other" and output.missing_workup:
+        completeness -= len(output.missing_workup) * _WORKUP_PENALTY
+    elif referral.specialty_requested.lower() in ("urology", "urologist"):
+        # Fallback: generic investigation check for "other" category
         found_investigations = [
-            inv for inv in _STRONGLY_RECOMMENDED_UROLOGY if _word_boundary_match(all_text, inv)
+            inv for inv in _STRONGLY_RECOMMENDED_UROLOGY
+            if _word_boundary_match(all_text, inv)
         ]
         if not found_investigations:
             missing.append(

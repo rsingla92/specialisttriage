@@ -1,6 +1,8 @@
 """Tests for the triage engine."""
 import pytest
-from app.services.triage_engine import triage_referral, ReferralData
+from app.services.triage_engine import (
+    triage_referral, ReferralData, classify_category, detect_missing_workup,
+)
 
 
 def make_referral(**kwargs) -> ReferralData:
@@ -174,6 +176,78 @@ class TestTriageNotes:
         result = triage_referral(ref)
         # Flag for PSA should NOT fire when PSA is in investigations
         assert not any("PSA status" in f for f in result.flags)
+
+
+class TestClinicalCategoryClassification:
+    def test_hematuria_classified(self):
+        assert classify_category("gross hematuria x 3 weeks") == "hematuria"
+
+    def test_psa_classified(self):
+        assert classify_category("rising psa 6.8 from 4.1") == "psa_prostate"
+
+    def test_stones_classified(self):
+        assert classify_category("left kidney stone 8mm") == "stones"
+
+    def test_incontinence_classified(self):
+        assert classify_category("stress urinary incontinence") == "incontinence"
+
+    def test_uti_classified(self):
+        assert classify_category("recurrent uti 4 episodes") == "uti_recurrent"
+
+    def test_ed_classified(self):
+        assert classify_category("erectile dysfunction 2 years") == "erectile_dysfunction"
+
+    def test_no_match_classified_other(self):
+        assert classify_category("lower back pain and fatigue") == "other"
+
+    def test_multi_keyword_uses_priority_order(self):
+        # Hematuria should win over stones when both present
+        assert classify_category("hematuria with kidney stones") == "hematuria"
+
+
+class TestMissingWorkupDetection:
+    def test_hematuria_missing_cytology(self):
+        missing = detect_missing_workup("hematuria", "urinalysis done, ct urogram, creatinine 88")
+        assert "Urine cytology" in missing
+
+    def test_hematuria_complete(self):
+        text = "urinalysis done, urine cytology negative, ct urogram normal, creatinine 88"
+        missing = detect_missing_workup("hematuria", text)
+        assert len(missing) == 0
+
+    def test_psa_missing_dre(self):
+        missing = detect_missing_workup("psa_prostate", "psa 6.8, family history negative")
+        assert "DRE findings" in missing
+
+    def test_other_no_workup_flags(self):
+        missing = detect_missing_workup("other", "lower back pain")
+        assert len(missing) == 0
+
+    def test_word_boundary_on_workup(self):
+        # "capsaicin" should NOT match "psa"
+        missing = detect_missing_workup("psa_prostate", "capsaicin cream applied")
+        assert "PSA value" in missing
+
+
+class TestTriageOutputNewFields:
+    def test_output_includes_clinical_category(self):
+        ref = make_referral(chief_complaint="Gross hematuria x 2 weeks")
+        result = triage_referral(ref)
+        assert result.clinical_category == "hematuria"
+
+    def test_output_includes_missing_workup(self):
+        ref = make_referral(
+            chief_complaint="Rising PSA 6.8",
+            relevant_investigations="",
+        )
+        result = triage_referral(ref)
+        assert len(result.missing_workup) > 0
+
+    def test_ed_referral_flagged(self):
+        ref = make_referral(chief_complaint="Erectile dysfunction for 2 years")
+        result = triage_referral(ref)
+        assert result.clinical_category == "erectile_dysfunction"
+        assert any("ED referral" in f for f in result.flags)
 
 
 class TestNonUrologySpecialty:
