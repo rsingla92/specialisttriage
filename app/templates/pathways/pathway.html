@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} Pathway – SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px;">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('pathways.index') }}">Pathways</a></li>
+      <li class="breadcrumb-item active">{{ label }}</li>
+    </ol>
+  </nav>
+
+  <h1 class="h3 fw-bold mb-1">{{ label }}</h1>
+  <p class="text-muted mb-4">Before referring, please complete these steps. Based on BC/GPAC guidelines.</p>
+
+  {# Step 1: Required workup #}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-1-circle me-2"></i>Required Workup</h5>
+    </div>
+    <div class="card-body">
+      <p class="small text-muted mb-3">Complete before considering referral:</p>
+      {% for label_text, keywords in workup_items %}
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="workup-{{ loop.index }}">
+        <label class="form-check-label" for="workup-{{ loop.index }}">
+          {{ label_text }}
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Step 2: Consider before referring #}
+  {% if consider_before %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning bg-opacity-25">
+      <h5 class="mb-0"><i class="bi bi-2-circle me-2"></i>Consider Before Referring</h5>
+    </div>
+    <div class="card-body">
+      <p class="small text-muted mb-3">These may resolve without specialist assessment:</p>
+      {% for item in consider_before %}
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="consider-{{ loop.index }}">
+        <label class="form-check-label" for="consider-{{ loop.index }}">
+          {{ item }}
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Step 3: Referral recommended if #}
+  {% if refer_if %}
+  <div class="card shadow-sm mb-4 border-success">
+    <div class="card-body">
+      <h5 class="fw-bold text-success"><i class="bi bi-check-circle me-2"></i>Referral Recommended If:</h5>
+      <p class="mb-0">{{ refer_if }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="text-center mt-4">
+    <p class="text-muted small">
+      These pathways are endorsed by the North Shore urology team.
+      <a href="{{ url_for('pathways.index') }}">Back to all pathways</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
