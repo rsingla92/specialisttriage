@@ -1,13 +1,14 @@
 """Referral management routes."""
 from datetime import datetime, date, timezone
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Referral, TriageResult, Feedback
+from app.models import Referral, TriageResult, Feedback, ResponseTemplate, BatchAction
 from app.services.triage_engine import triage_referral, ReferralData
 from app.services.ocean_md import OceanMDService
 
 _ALLOWED_DECISIONS = frozenset({"accepted", "declined", "needs_info", "redirected"})
+_MAX_BATCH_SIZE = 100
 
 referrals_bp = Blueprint("referrals", __name__)
 
@@ -28,6 +29,9 @@ def _run_triage(referral: Referral) -> TriageResult:
         specialty_requested=referral.specialty_requested or "Urology",
     )
     output = triage_referral(rd)
+
+    referral.clinical_category = output.clinical_category
+    referral.missing_workup = output.missing_workup
 
     tr = TriageResult(
         referral_id=referral.id,
@@ -105,11 +109,14 @@ def import_referrals():
             specialist_id=current_user.id,
         )
         db.session.add(referral)
-        db.session.flush()  # get referral.id for TriageResult FK
-
-        tr = _run_triage(referral)
-        db.session.add(tr)
-        imported += 1
+        try:
+            db.session.flush()  # get referral.id for TriageResult FK
+            tr = _run_triage(referral)
+            db.session.add(tr)
+            imported += 1
+        except Exception:
+            db.session.rollback()
+            continue
 
     db.session.commit()
     flash(
@@ -221,3 +228,105 @@ def send_feedback(referral_id):
         return redirect(url_for("referrals.detail", referral_id=referral_id))
 
     return render_template("referrals/feedback.html", referral=referral)
+
+
+@referrals_bp.route("/batch", methods=["POST"])
+@login_required
+def batch_action():
+    """Process a batch action on multiple referrals."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    referral_ids = data.get("referral_ids", [])
+    action_type = data.get("action_type", "")
+    template_id = data.get("template_id")
+
+    if not referral_ids:
+        return jsonify({"error": "No referral IDs provided"}), 400
+    if len(referral_ids) > _MAX_BATCH_SIZE:
+        return jsonify({"error": f"Maximum {_MAX_BATCH_SIZE} referrals per batch"}), 400
+    if action_type not in _ALLOWED_DECISIONS:
+        return jsonify({"error": "Invalid action type"}), 400
+
+    # Ownership check: only process referrals belonging to current user
+    owned = Referral.query.filter(
+        Referral.id.in_(referral_ids),
+        Referral.specialist_id == current_user.id,
+    ).all()
+    owned_map = {r.id: r for r in owned}
+    rejected_ids = [rid for rid in referral_ids if rid not in owned_map]
+
+    # Load template if provided
+    template = None
+    if template_id:
+        template = ResponseTemplate.query.get(template_id)
+
+    ocean = OceanMDService.from_app()
+    results = []
+
+    batch = BatchAction(
+        referral_ids=referral_ids,
+        action_type=action_type,
+        template_id=template_id,
+        executed_by=current_user.id,
+    )
+    db.session.add(batch)
+    db.session.flush()
+
+    for rid in referral_ids:
+        if rid in rejected_ids:
+            results.append({"id": rid, "status": "rejected", "reason": "not_owned"})
+            continue
+
+        referral = owned_map[rid]
+
+        # Skip referrals that already have feedback
+        if referral.feedback:
+            results.append({"id": rid, "status": "skipped", "reason": "already_actioned"})
+            continue
+
+        # Skip ED referrals for batch actions
+        if referral.clinical_category == "erectile_dysfunction":
+            results.append({"id": rid, "status": "skipped", "reason": "ed_referral"})
+            continue
+
+        # Build message from template or default
+        if template:
+            message = template.render(
+                patient_name=referral.patient_full_name,
+                specialist_name=current_user.full_name,
+            )
+        else:
+            message = f"Referral for {referral.patient_full_name} has been {action_type}."
+
+        fb = Feedback(
+            referral_id=referral.id,
+            specialist_id=current_user.id,
+            decision=action_type,
+            message=message,
+            batch_action_id=batch.id,
+        )
+        db.session.add(fb)
+
+        referral.status = action_type
+        if action_type in {"accepted", "declined", "redirected"}:
+            referral.resolved_at = datetime.now(timezone.utc)
+
+        # Send via OceanMD
+        if referral.ocean_referral_id:
+            sent = ocean.send_feedback(
+                referral.ocean_referral_id, message, action_type,
+            )
+            fb.delivery_status = "sent" if sent else "failed"
+            results.append({
+                "id": rid,
+                "status": "sent" if sent else "failed",
+                "patient": referral.patient_full_name,
+            })
+        else:
+            fb.delivery_status = "saved"
+            results.append({"id": rid, "status": "saved", "patient": referral.patient_full_name})
+
+    db.session.commit()
+    return jsonify({"results": results, "batch_id": batch.id})

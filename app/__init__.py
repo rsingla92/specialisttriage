@@ -46,10 +46,14 @@ def create_app(config_name="default"):
     from app.routes.referrals import referrals_bp
     from app.routes.dashboard import dashboard_bp
     from app.routes.api import api_bp
+    from app.routes.templates import templates_bp
+    from app.routes.pathways import pathways_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(referrals_bp, url_prefix="/referrals")
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(templates_bp, url_prefix="/templates")
+    app.register_blueprint(pathways_bp)
 
     return app
