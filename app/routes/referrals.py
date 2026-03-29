@@ -110,12 +110,13 @@ def import_referrals():
         )
         db.session.add(referral)
         try:
+            db.session.begin_nested()  # savepoint so one failure doesn't kill the batch
             db.session.flush()  # get referral.id for TriageResult FK
             tr = _run_triage(referral)
             db.session.add(tr)
             imported += 1
         except Exception:
-            db.session.rollback()
+            db.session.rollback()  # rolls back to savepoint, not entire transaction
             continue
 
     db.session.commit()
@@ -312,6 +313,8 @@ def batch_action():
         referral.status = action_type
         if action_type in {"accepted", "declined", "redirected"}:
             referral.resolved_at = datetime.now(timezone.utc)
+        else:
+            referral.resolved_at = None
 
         # Send via OceanMD
         if referral.ocean_referral_id:
