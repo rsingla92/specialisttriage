@@ -9,9 +9,9 @@
   </div>
 </div>
 
-{# --- Stats cards --- #}
+{# --- Stats cards (4) --- #}
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-4 col-lg-2">
+  <div class="col-6 col-md-3">
     <div class="card text-center border-0 bg-light h-100">
       <div class="card-body py-3">
         <div class="fs-2 fw-bold">{{ stats.total }}</div>
@@ -19,102 +19,111 @@
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card text-center border-0 bg-danger bg-opacity-10 h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-danger">{{ stats.urgent }}</div>
-        <div class="text-muted small">Urgent</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-lg-2">
+  <div class="col-6 col-md-3">
     <div class="card text-center border-0 bg-warning bg-opacity-10 h-100">
       <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-warning">{{ stats.high }}</div>
-        <div class="text-muted small">High Priority</div>
+        <div class="fs-2 fw-bold text-warning">{{ stats.incomplete }}</div>
+        <div class="text-muted small">Incomplete</div>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-4 col-lg-2">
+  <div class="col-6 col-md-3">
     <div class="card text-center border-0 bg-info bg-opacity-10 h-100">
       <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-info">{{ stats.needs_info }}</div>
-        <div class="text-muted small">Needs Info</div>
+        <div class="fs-2 fw-bold text-info">{{ stats.pending }}</div>
+        <div class="text-muted small">Pending Action</div>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card text-center border-0 bg-secondary bg-opacity-10 h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-secondary">{{ stats.inappropriate }}</div>
-        <div class="text-muted small">Inappropriate</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-lg-2">
+  <div class="col-6 col-md-3">
     <div class="card text-center border-0 bg-success bg-opacity-10 h-100">
       <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-success">{{ stats.resolved }}</div>
-        <div class="text-muted small">Resolved</div>
+        <div class="fs-2 fw-bold text-success">~{{ stats.time_saved_min }}m</div>
+        <div class="text-muted small">Est. Time Saved (week)</div>
       </div>
     </div>
   </div>
 </div>
 
+{# --- Category tabs --- #}
+{% set categories = [
+  ('', 'All', stats.total),
+  ('hematuria', 'Hematuria', category_counts.get('hematuria', 0)),
+  ('psa_prostate', 'PSA/Prostate', category_counts.get('psa_prostate', 0)),
+  ('stones', 'Stones', category_counts.get('stones', 0)),
+  ('incontinence', 'Incontinence', category_counts.get('incontinence', 0)),
+  ('uti_recurrent', 'UTI', category_counts.get('uti_recurrent', 0)),
+  ('erectile_dysfunction', 'ED', category_counts.get('erectile_dysfunction', 0)),
+  ('other', 'Other', category_counts.get('other', 0)),
+] %}
+<ul class="nav nav-tabs mb-3">
+  {% for slug, label, count in categories %}
+  <li class="nav-item">
+    <a class="nav-link {% if current_category == slug or (not current_category and not slug) %}active{% endif %}"
+       href="{{ url_for('dashboard.index', category=slug) if slug else url_for('dashboard.index') }}">
+      {{ label }}
+      {% if count %}<span class="badge bg-secondary ms-1">{{ count }}</span>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
 {# --- Referral table --- #}
 {% if referrals %}
 <div class="card shadow-sm">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-    <h5 class="mb-0">Referrals</h5>
-    <div class="d-flex gap-2">
-      <select id="filterPriority" class="form-select form-select-sm" style="width:auto">
-        <option value="">All priorities</option>
-        <option value="urgent">Urgent</option>
-        <option value="high">High</option>
-        <option value="routine">Routine</option>
-        <option value="low">Low</option>
-        <option value="needs_info">Needs Info</option>
-        <option value="inappropriate">Inappropriate</option>
-      </select>
-    </div>
-  </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0" id="referralTable">
       <thead class="table-light">
         <tr>
-          <th>Patient</th>
-          <th>Referring Physician</th>
-          <th>Chief Complaint</th>
-          <th>Priority</th>
-          <th>Status</th>
-          <th>Received</th>
+          <th style="width:40px"><input type="checkbox" id="selectAll" class="form-check-input"></th>
+          <th>Patient / Referring MD</th>
+          <th>Category</th>
+          <th>Urgency</th>
+          <th>Completeness</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for r in referrals %}
-        <tr data-priority="{{ r.priority }}">
+        <tr data-id="{{ r.id }}" data-category="{{ r.clinical_category or 'other' }}">
           <td>
-            <strong>{{ r.patient_full_name }}</strong>
-            <div class="text-muted small">Age {{ r.patient_age }}</div>
-          </td>
-          <td>
-            {{ r.referring_physician_name }}
-            {% if r.referring_clinic %}
-              <div class="text-muted small">{{ r.referring_clinic }}</div>
+            {% if r.feedback %}
+              <span class="badge bg-success" title="Already actioned">Done</span>
+            {% else %}
+              <input type="checkbox" class="form-check-input row-check" value="{{ r.id }}">
             {% endif %}
           </td>
           <td>
-            <span class="text-truncate d-inline-block" style="max-width:280px" title="{{ r.chief_complaint }}">
+            <strong>{{ r.patient_full_name }}</strong>
+            <span class="text-muted small ms-1">Age {{ r.patient_age }}</span>
+            &mdash; {{ r.referring_physician_name }}
+            {% if r.referring_clinic %}<span class="text-muted small">({{ r.referring_clinic }})</span>{% endif %}
+            <div class="text-muted small text-truncate" style="max-width:400px" title="{{ r.chief_complaint }}">
               {{ r.chief_complaint }}
+            </div>
+          </td>
+          <td>
+            {% set cat = r.clinical_category or 'other' %}
+            {% set cat_colors = {
+              'hematuria': '#c2185b', 'psa_prostate': '#00796b', 'stones': '#f57f17',
+              'incontinence': '#303f9f', 'uti_recurrent': '#7b1fa2',
+              'erectile_dysfunction': '#616161', 'other': '#9e9e9e'
+            } %}
+            {% set cat_labels = {
+              'hematuria': 'Hematuria', 'psa_prostate': 'PSA/Prostate', 'stones': 'Stones',
+              'incontinence': 'Incontinence', 'uti_recurrent': 'UTI',
+              'erectile_dysfunction': 'ED', 'other': 'Other'
+            } %}
+            <span class="badge" style="background:{{ cat_colors.get(cat, '#9e9e9e') }}20; color:{{ cat_colors.get(cat, '#9e9e9e') }}; border:1px solid {{ cat_colors.get(cat, '#9e9e9e') }}40;">
+              {{ cat_labels.get(cat, cat) }}
             </span>
           </td>
           <td>
             {% set p = r.priority %}
             {% if p == 'urgent' %}
-              <span class="badge bg-danger">🚨 Urgent</span>
+              <span class="badge bg-danger">Urgent</span>
             {% elif p == 'high' %}
-              <span class="badge bg-warning text-dark">⚠️ High</span>
+              <span class="badge bg-warning text-dark">High</span>
             {% elif p == 'routine' %}
               <span class="badge bg-primary">Routine</span>
             {% elif p == 'low' %}
@@ -128,37 +137,75 @@
             {% endif %}
           </td>
           <td>
-            {% set s = r.status %}
-            {% if s == 'pending' %}
-              <span class="text-muted small">Pending</span>
-            {% elif s == 'triaged' %}
-              <span class="text-info small">Triaged</span>
-            {% elif s == 'accepted' %}
-              <span class="text-success small fw-bold">Accepted</span>
-            {% elif s == 'declined' %}
-              <span class="text-danger small fw-bold">Declined</span>
-            {% elif s == 'needs_info' %}
-              <span class="text-warning small fw-bold">Needs Info</span>
-            {% elif s == 'redirected' %}
-              <span class="text-secondary small fw-bold">Redirected</span>
+            {% if r.triage_result %}
+              {% set cs = r.triage_result.completeness_score %}
+              {% set bar_color = 'bg-success' if cs >= 80 else ('bg-warning' if cs >= 50 else 'bg-danger') %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress" style="width:60px;height:8px;">
+                  <div class="progress-bar {{ bar_color }}" style="width:{{ cs }}%"></div>
+                </div>
+                <span class="small text-muted">{{ cs }}%</span>
+              </div>
             {% else %}
-              <span class="text-muted small">{{ s }}</span>
+              <span class="text-muted small">—</span>
             {% endif %}
           </td>
-          <td class="text-muted small">
-            {{ r.received_at.strftime('%b %d, %Y') if r.received_at else '—' }}
-          </td>
           <td>
-            <a href="{{ url_for('referrals.detail', referral_id=r.id) }}"
-               class="btn btn-sm btn-outline-primary">
-              Review <i class="bi bi-chevron-right"></i>
-            </a>
+            {% if r.missing_workup and r.missing_workup|length > 0 and not r.feedback %}
+              <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-warning">
+                Request Info
+              </a>
+            {% elif not r.feedback %}
+              <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-outline-primary">
+                Review
+              </a>
+            {% else %}
+              <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-outline-secondary">
+                View
+              </a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+</div>
+
+{# --- Pagination --- #}
+{% if pagination.pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+    {% if pagination.has_prev %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.prev_num, category=current_category) }}">Previous</a>
+    </li>
+    {% endif %}
+    {% for p in pagination.iter_pages() %}
+      {% if p %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('dashboard.index', page=p, category=current_category) }}">{{ p }}</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.next_num, category=current_category) }}">Next</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+{# --- Empty state --- #}
+{% if current_category %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox fs-1 text-muted"></i>
+  <p class="text-muted mt-3 mb-1">No {{ current_category|replace('_', ' ') }} referrals right now.</p>
+  <p class="text-muted small">You have {{ stats.total }} referrals in other categories.</p>
 </div>
 {% else %}
 <div class="text-center py-5">
@@ -167,15 +214,127 @@
   <p class="text-muted small">Click <strong>Import from OceanMD</strong> to pull your pending referrals.</p>
 </div>
 {% endif %}
+{% endif %}
+
+{# --- Batch action bar --- #}
+<div id="batchBar" class="fixed-bottom bg-white border-top shadow-lg py-2 px-4 d-none">
+  <div class="d-flex justify-content-between align-items-center">
+    <span id="batchCount" class="fw-bold">0 selected</span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-success" onclick="doBatch('accepted')">Accept All</button>
+      <button class="btn btn-sm btn-warning" onclick="doBatch('needs_info')">Request Workup</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="doBatch('declined')">Decline</button>
+    </div>
+  </div>
+</div>
+
+{# --- Batch confirmation modal --- #}
+<div class="modal fade" id="batchModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Batch Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="batchModalAction" class="fw-bold"></p>
+        <ul id="batchModalList" class="list-unstyled small"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="batchConfirmBtn">Send All</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById('filterPriority')?.addEventListener('change', function() {
-  const val = this.value;
-  document.querySelectorAll('#referralTable tbody tr').forEach(row => {
-    row.style.display = (!val || row.dataset.priority === val) ? '' : 'none';
+const csrfToken = document.querySelector('meta[name=csrf-token]')?.content ||
+  document.querySelector('input[name=csrf_token]')?.value || '';
+
+// Select all / individual checkbox logic
+const selectAll = document.getElementById('selectAll');
+const batchBar = document.getElementById('batchBar');
+
+function getChecked() {
+  return [...document.querySelectorAll('.row-check:checked')].map(cb => parseInt(cb.value));
+}
+
+function updateBatchBar() {
+  const checked = getChecked();
+  if (checked.length > 0) {
+    batchBar.classList.remove('d-none');
+    document.getElementById('batchCount').textContent = checked.length + ' selected';
+  } else {
+    batchBar.classList.add('d-none');
+  }
+}
+
+selectAll?.addEventListener('change', function() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+  updateBatchBar();
+});
+document.querySelectorAll('.row-check').forEach(cb => {
+  cb.addEventListener('change', updateBatchBar);
+});
+
+// Batch action flow
+let pendingAction = '';
+
+function doBatch(action) {
+  const ids = getChecked();
+  if (!ids.length) return;
+  pendingAction = action;
+  const labels = {accepted: 'Accept', needs_info: 'Request Workup', declined: 'Decline'};
+  document.getElementById('batchModalAction').textContent =
+    labels[action] + ' ' + ids.length + ' referral(s):';
+  const list = document.getElementById('batchModalList');
+  list.innerHTML = '';
+  ids.slice(0, 8).forEach(id => {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    const name = row?.querySelector('strong')?.textContent || 'Referral #' + id;
+    list.innerHTML += '<li>' + name + '</li>';
   });
+  if (ids.length > 8) list.innerHTML += '<li class="text-muted">and ' + (ids.length - 8) + ' more...</li>';
+  new bootstrap.Modal(document.getElementById('batchModal')).show();
+}
+
+document.getElementById('batchConfirmBtn')?.addEventListener('click', async function() {
+  const ids = getChecked();
+  this.disabled = true;
+  this.textContent = 'Sending...';
+  try {
+    const resp = await fetch('/referrals/batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+      body: JSON.stringify({referral_ids: ids, action_type: pendingAction})
+    });
+    const data = await resp.json();
+    bootstrap.Modal.getInstance(document.getElementById('batchModal')).hide();
+    // Update UI per result
+    (data.results || []).forEach(r => {
+      const row = document.querySelector(`tr[data-id="${r.id}"]`);
+      if (!row) return;
+      const cb = row.querySelector('.row-check');
+      if (r.status === 'sent' || r.status === 'saved') {
+        if (cb) cb.replaceWith(Object.assign(document.createElement('span'), {
+          className: 'badge bg-success', textContent: 'Done', title: 'Sent'
+        }));
+      } else if (r.status === 'failed') {
+        if (cb) cb.replaceWith(Object.assign(document.createElement('span'), {
+          className: 'badge bg-danger', textContent: 'Failed', title: 'Send failed'
+        }));
+      }
+    });
+    updateBatchBar();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Send All';
+  }
 });
 </script>
 {% endblock %}

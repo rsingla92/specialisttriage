@@ -128,6 +128,69 @@ _MOCK_REFERRALS: list[dict[str, Any]] = [
         "relevant_investigations": "Urinalysis: normal, voiding diary completed (avg 8x/day)",
         "specialty_requested": "Urology",
     },
+    {
+        "ocean_referral_id": "OCN-2026-006",
+        "patient_first_name": "Tom",
+        "patient_last_name": "Bradley",
+        "patient_dob": str(date.today() - timedelta(days=365 * 52)),
+        "patient_phn": "9876543215",
+        "referring_physician_name": "Dr. Susan Kim",
+        "referring_clinic": "Deep Cove Medical",
+        "referring_physician_phone": "604-555-0601",
+        "referring_physician_fax": "604-555-0602",
+        "chief_complaint": "Left flank pain, CT shows 8mm ureteral stone",
+        "clinical_notes": (
+            "52M presenting with acute left flank pain radiating to groin. "
+            "CT KUB confirms 8mm stone at left UVJ. Creatinine 92. Urinalysis shows blood."
+        ),
+        "relevant_history": "Previous kidney stone 5 years ago (passed spontaneously)",
+        "current_medications": "Lisinopril 10mg",
+        "allergies": "NKDA",
+        "relevant_investigations": "CT KUB: 8mm stone L UVJ, creatinine 92, urinalysis 3+ blood",
+        "specialty_requested": "Urology",
+    },
+    {
+        "ocean_referral_id": "OCN-2026-007",
+        "patient_first_name": "Alan",
+        "patient_last_name": "Foster",
+        "patient_dob": str(date.today() - timedelta(days=365 * 61)),
+        "patient_phn": "9876543216",
+        "referring_physician_name": "Dr. Mark Lee",
+        "referring_clinic": "Lynn Valley Medical",
+        "referring_physician_phone": "604-555-0701",
+        "referring_physician_fax": "604-555-0702",
+        "chief_complaint": "Erectile dysfunction for 2 years",
+        "clinical_notes": (
+            "61M with ED for 2 years. Has tried sildenafil 50mg with partial response. "
+            "HTN and diabetes well controlled. No other urological symptoms."
+        ),
+        "relevant_history": "Type 2 DM, HTN, hyperlipidemia",
+        "current_medications": "Metformin 1000mg BID, Amlodipine 5mg, Atorvastatin 20mg",
+        "allergies": "NKDA",
+        "relevant_investigations": "HbA1c 7.1, testosterone 12 nmol/L (normal)",
+        "specialty_requested": "Urology",
+    },
+    {
+        "ocean_referral_id": "OCN-2026-008",
+        "patient_first_name": "Karen",
+        "patient_last_name": "White",
+        "patient_dob": str(date.today() - timedelta(days=365 * 44)),
+        "patient_phn": "9876543217",
+        "referring_physician_name": "Dr. Emily Chen",
+        "referring_clinic": "North Van Walk-In",
+        "referring_physician_phone": "604-555-0801",
+        "referring_physician_fax": "604-555-0802",
+        "chief_complaint": "Lower back pain and fatigue, requesting urology assessment",
+        "clinical_notes": (
+            "44F with chronic lower back pain and fatigue. No urinary symptoms. "
+            "Requesting urology referral at patient's request."
+        ),
+        "relevant_history": "Fibromyalgia, depression",
+        "current_medications": "Duloxetine 60mg, acetaminophen PRN",
+        "allergies": "Codeine",
+        "relevant_investigations": "",
+        "specialty_requested": "Urology",
+    },
 ]
 
 

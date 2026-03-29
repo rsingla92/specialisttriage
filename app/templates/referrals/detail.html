@@ -240,6 +240,51 @@
     </div>
     {% endif %}
 
+    {# Missing workup panel #}
+    {% if referral.missing_workup and referral.missing_workup|length > 0 %}
+    <div class="card shadow-sm mb-4 border-warning">
+      <div class="card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Missing Workup
+          {% if referral.clinical_category %}
+            <span class="badge bg-secondary fw-normal ms-1">{{ referral.clinical_category|replace('_', ' ')|title }}</span>
+          {% endif %}
+        </h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-3">
+          {% for item in referral.missing_workup %}
+            <li class="mb-1">
+              <i class="bi bi-x-circle text-danger me-1"></i>{{ item }}
+            </li>
+          {% endfor %}
+        </ul>
+        <label class="form-label fw-bold small">Draft message to referring physician:</label>
+        <textarea class="form-control mb-2" rows="4" id="workupMessage">Loading template...</textarea>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}" class="btn btn-warning btn-sm">
+            <i class="bi bi-send me-1"></i>Send via OceanMD
+          </a>
+          <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('workupMessage').value)">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+    fetch('/templates/api?category={{ referral.clinical_category }}&type=needs_info&patient={{ referral.patient_full_name|urlencode }}&specialist={{ current_user.full_name|urlencode }}')
+      .then(r => r.json())
+      .then(d => { if (d.body) document.getElementById('workupMessage').value = d.body; })
+      .catch(() => { document.getElementById('workupMessage').value = 'Template not available. Please write your message.'; });
+    </script>
+    {% elif referral.triage_result and referral.triage_result.completeness_score >= 80 %}
+    <div class="card shadow-sm mb-4 border-success">
+      <div class="card-body text-center py-3">
+        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Workup Complete</span>
+      </div>
+    </div>
+    {% endif %}
+
     {# Action buttons #}
     <div class="card shadow-sm">
       <div class="card-header bg-white">
