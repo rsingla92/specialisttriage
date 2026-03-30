@@ -250,6 +250,41 @@ class TestTriageOutputNewFields:
         assert any("ED referral" in f for f in result.flags)
 
 
+class TestTriageRuleSet:
+    def test_build_hardcoded_ruleset(self):
+        from app.services.triage_engine import _build_hardcoded_ruleset
+        rs = _build_hardcoded_ruleset()
+        assert rs.specialty_id is None
+        assert len(rs.categories) == 6
+        assert len(rs.urgent_keywords) > 0
+        assert "field_penalty" in rs.scoring
+
+    def test_classify_with_ruleset(self):
+        from app.services.triage_engine import _build_hardcoded_ruleset
+        rs = _build_hardcoded_ruleset()
+        assert classify_category("gross hematuria", ruleset=rs) == "hematuria"
+        assert classify_category("rising psa", ruleset=rs) == "psa_prostate"
+        assert classify_category("random text", ruleset=rs) == "other"
+
+    def test_detect_workup_with_ruleset(self):
+        from app.services.triage_engine import _build_hardcoded_ruleset
+        rs = _build_hardcoded_ruleset()
+        missing = detect_missing_workup("hematuria", "urinalysis done, creatinine 88", ruleset=rs)
+        assert "Urine cytology" in missing
+
+    def test_triage_with_specialty_id_none(self):
+        ref = make_referral(chief_complaint="Gross hematuria x 2 weeks")
+        result = triage_referral(ref, specialty_id=None)
+        assert result.clinical_category == "hematuria"
+
+    def test_load_ruleset_fallback(self):
+        from app.services.triage_engine import load_ruleset, clear_ruleset_cache
+        clear_ruleset_cache()
+        rs = load_ruleset(specialty_id=None)
+        assert rs.specialty_id is None
+        assert len(rs.categories) == 6
+
+
 class TestNonUrologySpecialty:
     def test_non_urology_uses_shorter_required_fields(self):
         ref = ReferralData(

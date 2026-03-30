@@ -428,16 +428,149 @@ class TestReferralImportCategories:
 
 
 class TestPathways:
+    def _seed_specialty(self, app):
+        from app.services.specialty_seeder import seed_all_specialties
+        seed_all_specialties(db)
+
     def test_pathway_index_public(self, client, app):
+        self._seed_specialty(app)
         resp = client.get("/pathways")
         assert resp.status_code == 200
         assert b"Hematuria" in resp.data
 
     def test_pathway_valid_category(self, client, app):
-        resp = client.get("/pathways/hematuria")
+        self._seed_specialty(app)
+        resp = client.get("/pathways/urology/hematuria")
         assert resp.status_code == 200
         assert b"Required Workup" in resp.data
 
     def test_pathway_invalid_category_404(self, client, app):
-        resp = client.get("/pathways/nonexistent")
+        self._seed_specialty(app)
+        resp = client.get("/pathways/urology/nonexistent")
         assert resp.status_code == 404
+
+    def test_pathway_legacy_redirect(self, client, app):
+        self._seed_specialty(app)
+        resp = client.get("/pathways/hematuria")
+        assert resp.status_code == 302
+
+    def test_pathway_multi_specialty(self, client, app):
+        self._seed_specialty(app)
+        resp = client.get("/pathways")
+        assert b"Gastroenterology" in resp.data
+        assert b"Orthopedics" in resp.data
+
+
+class TestAnalytics:
+    def test_analytics_requires_login(self, client, app):
+        resp = client.get("/analytics")
+        assert resp.status_code == 302
+
+    def test_analytics_page_loads(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        resp = client.get("/analytics")
+        assert resp.status_code == 200
+        assert b"Analytics" in resp.data
+
+    def test_analytics_volume_api(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+        resp = client.get("/api/analytics/volume?days=30")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "data" in data
+
+    def test_analytics_categories_api(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+        resp = client.get("/api/analytics/categories?days=30")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "data" in data
+        assert len(data["data"]) > 0
+
+    def test_analytics_summary_api(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        resp = client.get("/api/analytics/summary?days=30")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "total" in data
+        assert "avg_completeness" in data
+        assert "acceptance_rate" in data
+
+
+class TestAdmin:
+    def _seed_and_login(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        from app.services.specialty_seeder import seed_all_specialties
+        seed_all_specialties(db)
+
+    def test_admin_requires_login(self, client, app):
+        resp = client.get("/admin/")
+        assert resp.status_code == 302
+
+    def test_admin_rules_list(self, client, specialist, app):
+        self._seed_and_login(client, specialist, app)
+        resp = client.get("/admin/")
+        assert resp.status_code == 200
+        assert b"Clinical Rules" in resp.data
+
+    def test_admin_category_edit(self, client, specialist, app):
+        self._seed_and_login(client, specialist, app)
+        resp = client.get("/admin/category/hematuria")
+        assert resp.status_code == 200
+        assert b"Hematuria" in resp.data
+
+    def test_admin_export_rules(self, client, specialist, app):
+        self._seed_and_login(client, specialist, app)
+        resp = client.get("/admin/export")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["specialty"] == "Urology"
+        assert len(data["categories"]) > 0
+
+    def test_admin_add_keyword(self, client, specialist, app):
+        self._seed_and_login(client, specialist, app)
+        resp = client.post(
+            "/admin/category/hematuria/keywords",
+            data={"csrf_token": self._get_csrf(client), "action": "add", "keyword": "blood clots"},
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+        assert b"blood clots" in resp.data
+
+    def test_admin_create_category(self, client, specialist, app):
+        self._seed_and_login(client, specialist, app)
+        resp = client.post(
+            "/admin/categories",
+            data={"csrf_token": self._get_csrf(client), "display_name": "Test Category", "slug": "test_cat"},
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+        assert b"Test Category" in resp.data
+
+    def _get_csrf(self, client):
+        resp = client.get("/admin/")
+        data = resp.data.decode()
+        import re
+        match = re.search(r'name="csrf_token"\s+value="([^"]+)"', data)
+        return match.group(1) if match else ""
+
+
+class TestSpecialtySeeder:
+    def test_seed_creates_specialties(self, app):
+        from app.services.specialty_seeder import seed_all_specialties
+        from app.models import Specialty, ClinicalCategory
+        seed_all_specialties(db)
+        assert Specialty.query.count() == 3
+        urology = Specialty.query.filter_by(slug="urology").first()
+        assert urology is not None
+        cats = ClinicalCategory.query.filter_by(specialty_id=urology.id).count()
+        assert cats == 6
+
+    def test_seed_is_idempotent(self, app):
+        from app.services.specialty_seeder import seed_all_specialties
+        from app.models import Specialty
+        seed_all_specialties(db)
+        seed_all_specialties(db)
+        assert Specialty.query.count() == 3
