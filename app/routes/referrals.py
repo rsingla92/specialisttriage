@@ -107,8 +107,18 @@ def import_referrals():
             allergies=raw.get("allergies", ""),
             relevant_investigations=raw.get("relevant_investigations", ""),
             specialty_requested=raw.get("specialty_requested", "Urology"),
-            specialist_id=current_user.id,
         )
+
+        # Assign to clinic pool or individual specialist based on queue mode
+        clinic = current_user.primary_clinic
+        if clinic:
+            referral.clinic_id = clinic.id
+            if clinic.queue_mode in ("shared", "hybrid"):
+                referral.specialist_id = None  # goes to clinic pool
+            else:
+                referral.specialist_id = current_user.id
+        else:
+            referral.specialist_id = current_user.id
         db.session.add(referral)
         try:
             with db.session.begin_nested():  # savepoint so one failure doesn't kill the batch
@@ -128,11 +138,49 @@ def import_referrals():
     return redirect(url_for("dashboard.index"))
 
 
+def _can_access_referral(referral):
+    """Check if current user can access this referral."""
+    if referral.specialist_id == current_user.id:
+        return True
+    if current_user.role == "admin":
+        return True
+    if referral.clinic_id and referral.clinic_id in current_user.active_clinic_ids:
+        return True
+    return False
+
+
+@referrals_bp.route("/<int:referral_id>/claim", methods=["POST"])
+@login_required
+def claim_referral(referral_id):
+    """Claim a referral from the clinic pool."""
+    referral = Referral.query.get_or_404(referral_id)
+    if referral.clinic_id not in current_user.active_clinic_ids:
+        abort(403)
+    if referral.specialist_id is not None:
+        flash("This referral has already been claimed.", "warning")
+        return redirect(url_for("dashboard.index"))
+    referral.specialist_id = current_user.id
+    referral.assigned_at = datetime.now(timezone.utc)
+    db.session.commit()
+    flash(f"Claimed referral for {referral.patient_full_name}.", "success")
+    return redirect(url_for("referrals.detail", referral_id=referral_id))
+
+
+@referrals_bp.route("/<int:referral_id>/panel")
+@login_required
+def referral_panel(referral_id):
+    """Return referral details as HTML fragment for the quick review panel."""
+    referral = Referral.query.get_or_404(referral_id)
+    if not _can_access_referral(referral):
+        abort(403)
+    return render_template("referrals/panel.html", referral=referral)
+
+
 @referrals_bp.route("/<int:referral_id>")
 @login_required
 def detail(referral_id):
     referral = Referral.query.get_or_404(referral_id)
-    if referral.specialist_id != current_user.id and current_user.role != "admin":
+    if not _can_access_referral(referral):
         abort(403)
     return render_template("referrals/detail.html", referral=referral)
 
@@ -141,7 +189,7 @@ def detail(referral_id):
 @login_required
 def retriage(referral_id):
     referral = Referral.query.get_or_404(referral_id)
-    if referral.specialist_id != current_user.id and current_user.role != "admin":
+    if not _can_access_referral(referral):
         abort(403)
 
     if referral.triage_result:
@@ -159,7 +207,7 @@ def retriage(referral_id):
 @login_required
 def send_feedback(referral_id):
     referral = Referral.query.get_or_404(referral_id)
-    if referral.specialist_id != current_user.id and current_user.role != "admin":
+    if not _can_access_referral(referral):
         abort(403)
 
     if request.method == "POST":

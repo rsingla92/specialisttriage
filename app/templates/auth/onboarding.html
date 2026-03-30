@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Welcome — SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 640px;">
+  <h2 class="fw-bold mb-1" style="color: #1B6B93;">
+    Welcome to {{ clinic.name }}
+  </h2>
+  <p class="text-muted mb-4">Let's get your clinic set up. You can skip any step and come back later.</p>
+
+  <!-- Step indicators -->
+  <div class="d-flex gap-2 mb-4">
+    <span class="badge rounded-pill bg-primary step-badge" id="badge-1" style="background-color: #1B6B93 !important;">1. Invite Team</span>
+    <span class="badge rounded-pill bg-secondary step-badge" id="badge-2">2. Connect OceanMD</span>
+    <span class="badge rounded-pill bg-secondary step-badge" id="badge-3">3. Import Referrals</span>
+  </div>
+
+  <!-- Step 1: Invite team -->
+  <div id="step-1" class="card shadow-sm mb-3">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Invite your team</h5>
+      <p class="text-muted small">Enter email addresses (comma-separated) to generate invite links.</p>
+      <div class="mb-3">
+        <textarea class="form-control" id="invite-emails" rows="3"
+                  placeholder="colleague@clinic.ca, another@clinic.ca"></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" id="btn-generate-invites"
+              style="background-color: #1B6B93; border-color: #1B6B93;">
+        <i class="bi bi-link-45deg me-1"></i>Generate Invite Links
+      </button>
+      <div id="invite-results" class="mt-3" style="display: none;">
+        <label class="form-label fw-bold small">Share these links with your team:</label>
+        <div id="invite-links"></div>
+      </div>
+      <div class="mt-3 text-end">
+        <button class="btn btn-outline-secondary btn-sm" onclick="showStep(2)">
+          Next <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Connect OceanMD -->
+  <div id="step-2" class="card shadow-sm mb-3" style="display: none;">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-3"><i class="bi bi-cloud-check me-2"></i>Connect OceanMD</h5>
+      <p class="text-muted small">Enter your OceanMD API key to enable referral imports. You can skip this for now.</p>
+      <div class="mb-3">
+        <input type="text" class="form-control" id="ocean-api-key" placeholder="Your OceanMD API key">
+      </div>
+      <button class="btn btn-primary btn-sm" id="btn-save-ocean"
+              style="background-color: #1B6B93; border-color: #1B6B93;">
+        <i class="bi bi-check-lg me-1"></i>Save API Key
+      </button>
+      <span id="ocean-status" class="ms-2 small"></span>
+      <div class="mt-3 text-end">
+        <button class="btn btn-outline-secondary btn-sm" onclick="showStep(3)">
+          Next <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Import referrals -->
+  <div id="step-3" class="card shadow-sm mb-3" style="display: none;">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-3"><i class="bi bi-cloud-download me-2"></i>Import referrals</h5>
+      <p class="text-muted small">Pull in your existing referrals from OceanMD, or skip for now.</p>
+      <form action="{{ url_for('referrals.import_referrals') }}" method="post" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-sm"
+                style="background-color: #1B6B93; border-color: #1B6B93;">
+          <i class="bi bi-cloud-download-fill me-1"></i>Import from OceanMD
+        </button>
+      </form>
+      <div class="mt-4 text-center">
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg"
+           style="background-color: #1B6B93; border-color: #1B6B93;">
+          Go to Dashboard <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+        <p class="text-muted small mt-2">You can always import referrals later from the dashboard.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('step-' + i).style.display = i === n ? 'block' : 'none';
+    const badge = document.getElementById('badge-' + i);
+    if (i === n) {
+      badge.classList.remove('bg-secondary');
+      badge.classList.add('bg-primary');
+      badge.style.backgroundColor = '#1B6B93';
+    } else {
+      badge.classList.remove('bg-primary');
+      badge.classList.add('bg-secondary');
+      badge.style.backgroundColor = '';
+    }
+  }
+}
+
+document.getElementById('btn-generate-invites').addEventListener('click', function() {
+  const emails = document.getElementById('invite-emails').value;
+  if (!emails.trim()) return;
+
+  fetch('{{ url_for("clinic.invite") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({ emails: emails })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.invite_urls) {
+      const container = document.getElementById('invite-links');
+      container.innerHTML = '';
+      data.invite_urls.forEach(function(url) {
+        const div = document.createElement('div');
+        div.className = 'input-group input-group-sm mb-2';
+        div.innerHTML = '<input type="text" class="form-control" value="' + url + '" readonly>' +
+          '<button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(\'' + url + '\')">' +
+          '<i class="bi bi-clipboard"></i></button>';
+        container.appendChild(div);
+      });
+      document.getElementById('invite-results').style.display = 'block';
+    }
+  });
+});
+
+document.getElementById('btn-save-ocean').addEventListener('click', function() {
+  const key = document.getElementById('ocean-api-key').value;
+  fetch('{{ url_for("clinic.save_ocean_key") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({ api_key: key })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const status = document.getElementById('ocean-status');
+    if (data.ok) {
+      status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Saved</span>';
+    } else {
+      status.innerHTML = '<span class="text-danger">Error saving key</span>';
+    }
+  });
+});
+</script>
+{% endblock %}

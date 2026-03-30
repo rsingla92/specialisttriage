@@ -1,0 +1,96 @@
+{# Quick review panel — loaded via AJAX into offcanvas #}
+<div class="p-3">
+  {# Patient header #}
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h5 class="fw-bold mb-0">{{ referral.patient_full_name }}</h5>
+      <div class="text-muted small">Age {{ referral.patient_age }} | {{ referral.referring_physician_name }}</div>
+    </div>
+    {% if referral.priority %}
+      {# Priority badge - same as dashboard #}
+      {% set p = referral.priority %}
+      {% if p == 'urgent' %}<span class="badge bg-danger">Urgent</span>
+      {% elif p == 'high' %}<span class="badge bg-warning text-dark">High</span>
+      {% elif p == 'routine' %}<span class="badge bg-primary">Routine</span>
+      {% else %}<span class="badge bg-secondary">{{ p|title }}</span>{% endif %}
+    {% endif %}
+  </div>
+
+  {# Clinical summary #}
+  <div class="mb-3">
+    <label class="form-label fw-bold small text-muted">Chief Complaint</label>
+    <p class="mb-2">{{ referral.chief_complaint }}</p>
+  </div>
+
+  {% if referral.clinical_notes %}
+  <div class="mb-3">
+    <label class="form-label fw-bold small text-muted">Clinical Notes</label>
+    <p class="mb-2 small">{{ referral.clinical_notes }}</p>
+  </div>
+  {% endif %}
+
+  {% if referral.relevant_investigations %}
+  <div class="mb-3">
+    <label class="form-label fw-bold small text-muted">Investigations</label>
+    <p class="mb-2 small">{{ referral.relevant_investigations }}</p>
+  </div>
+  {% endif %}
+
+  {# Triage scores (if triaged) #}
+  {% if referral.triage_result %}
+  {% set tr = referral.triage_result %}
+  <div class="mb-3">
+    <label class="form-label fw-bold small text-muted">Triage Scores</label>
+    <div class="row g-2">
+      <div class="col-4 text-center">
+        <div class="small text-muted">Appropriateness</div>
+        <div class="fw-bold">{{ tr.appropriateness_score }}%</div>
+      </div>
+      <div class="col-4 text-center">
+        <div class="small text-muted">Completeness</div>
+        <div class="fw-bold">{{ tr.completeness_score }}%</div>
+      </div>
+      <div class="col-4 text-center">
+        <div class="small text-muted">Urgency</div>
+        <div class="fw-bold">{{ tr.urgency_score }}%</div>
+      </div>
+    </div>
+  </div>
+
+  {# Flags #}
+  {% if tr.flags %}
+  <div class="mb-3">
+    {% for flag in tr.flags %}
+    <div class="small">{{ flag }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {# Missing information #}
+  {% if referral.triage_result and referral.triage_result.missing_information and referral.triage_result.missing_information|length > 0 %}
+  <div class="alert alert-warning p-2 mb-3">
+    <strong class="small">Missing Information:</strong>
+    <ul class="mb-0 small ps-3">
+    {% for item in referral.triage_result.missing_information %}
+      <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# Action buttons #}
+  <hr>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=accepted"
+       class="btn btn-success btn-sm flex-fill">Accept</a>
+    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=needs_info"
+       class="btn btn-warning btn-sm flex-fill">Request Info</a>
+    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=declined"
+       class="btn btn-outline-danger btn-sm flex-fill">Decline</a>
+  </div>
+  <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}"
+     class="btn btn-outline-secondary btn-sm w-100 mt-2">
+    Full Details →
+  </a>
+</div>

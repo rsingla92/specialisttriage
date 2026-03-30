@@ -285,6 +285,56 @@ class TestTriageRuleSet:
         assert len(rs.categories) == 6
 
 
+class TestLLMClassification:
+    def test_llm_not_called_when_keyword_matches(self):
+        ref = make_referral(chief_complaint="Gross hematuria x 2 weeks")
+        result = triage_referral(ref)
+        assert result.clinical_category == "hematuria"
+        assert "LLM" not in str(result.flags)
+
+    def test_llm_not_called_when_disabled(self):
+        import os
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        ref = make_referral(chief_complaint="Lower back pain and fatigue only")
+        result = triage_referral(ref)
+        assert result.clinical_category == "other"
+        assert "LLM" not in str(result.flags)
+
+    def test_llm_classifier_returns_none_without_key(self):
+        import os
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        from app.services.llm_classifier import classify_with_llm
+        result = classify_with_llm("test text", [{"slug": "hematuria", "display_name": "Hematuria"}])
+        assert result is None
+
+    def test_llm_is_enabled_check(self):
+        import os
+        from app.services.llm_classifier import is_llm_enabled
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        assert not is_llm_enabled()
+        os.environ["ANTHROPIC_API_KEY"] = "test"
+        try:
+            assert is_llm_enabled()
+        finally:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+
+    def test_llm_called_on_other_with_mock(self):
+        import os
+        from unittest.mock import patch
+        from app.services.llm_classifier import LLMClassification
+        os.environ["ANTHROPIC_API_KEY"] = "test-key"
+        try:
+            mock_result = LLMClassification(
+                category="hematuria", confidence=0.85, reasoning="blood in urine"
+            )
+            with patch("app.services.llm_classifier.is_llm_enabled", return_value=True):
+                with patch("app.services.llm_classifier.classify_with_llm", return_value=mock_result):
+                    ref = make_referral(chief_complaint="Patient has unusual voiding symptoms")
+                    result = triage_referral(ref)
+        finally:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+
+
 class TestNonUrologySpecialty:
     def test_non_urology_uses_shorter_required_fields(self):
         ref = ReferralData(

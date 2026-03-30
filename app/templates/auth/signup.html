@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm mt-4">
+      <div class="card-body p-4">
+        <h2 class="card-title text-center mb-1 fw-bold" style="color: #1B6B93;">
+          <i class="bi bi-clipboard2-pulse-fill me-2"></i>SpecialistTriage
+        </h2>
+        <p class="text-center text-muted small mb-4">Create your clinic account</p>
+
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <h6 class="fw-bold text-muted mb-3">Clinic Details</h6>
+
+          <div class="mb-3">
+            <label for="clinic_name" class="form-label">Clinic Name</label>
+            <input type="text" class="form-control" id="clinic_name" name="clinic_name"
+                   value="{{ request.form.get('clinic_name', '') }}" required autofocus>
+          </div>
+
+          <div class="mb-3">
+            <label for="specialty_id" class="form-label">Primary Specialty</label>
+            <select class="form-select" id="specialty_id" name="specialty_id" required>
+              <option value="">Select a specialty...</option>
+              {% for s in specialties %}
+                <option value="{{ s.id }}" {% if request.form.get('specialty_id') == s.id|string %}selected{% endif %}>
+                  {{ s.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <hr>
+          <h6 class="fw-bold text-muted mb-3">Your Account</h6>
+
+          <div class="mb-3">
+            <label for="full_name" class="form-label">Your Name</label>
+            <input type="text" class="form-control" id="full_name" name="full_name"
+                   value="{{ request.form.get('full_name', '') }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   value="{{ request.form.get('email', '') }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100"
+                  style="background-color: #1B6B93; border-color: #1B6B93;">
+            <i class="bi bi-plus-circle me-1"></i>Create Clinic Account
+          </button>
+        </form>
+
+        <hr>
+        <p class="text-center mb-0 small">
+          Already have an account?
+          <a href="{{ url_for('auth.login') }}" style="color: #1B6B93;">Log in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

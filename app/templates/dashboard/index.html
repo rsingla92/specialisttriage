@@ -45,6 +45,24 @@
   </div>
 </div>
 
+{# --- Queue tabs (only shown when user has clinic memberships) --- #}
+{% if has_clinics is defined and has_clinics %}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab is not defined or tab != 'pool' %}active{% endif %}"
+       href="{{ url_for('dashboard.index', tab='mine') }}">
+      My Referrals <span class="badge bg-secondary">{{ mine_count|default(0) }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab is defined and tab == 'pool' %}active{% endif %}"
+       href="{{ url_for('dashboard.index', tab='pool') }}">
+      Clinic Queue <span class="badge bg-warning text-dark">{{ pool_count|default(0) }}</span>
+    </a>
+  </li>
+</ul>
+{% endif %}
+
 {# --- Category tabs --- #}
 {% set categories = [
   ('', 'All', stats.total),
@@ -228,6 +246,19 @@
   </div>
 </div>
 
+{# Quick review offcanvas #}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="reviewPanel" style="width:480px;">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title">Quick Review</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body p-0" id="reviewPanelBody">
+    <div class="text-center py-5 text-muted">
+      <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+    </div>
+  </div>
+</div>
+
 {# --- Batch confirmation modal --- #}
 <div class="modal fade" id="batchModal" tabindex="-1">
   <div class="modal-dialog">
@@ -335,6 +366,23 @@ document.getElementById('batchConfirmBtn')?.addEventListener('click', async func
     this.disabled = false;
     this.textContent = 'Send All';
   }
+});
+
+// Quick review panel - click row to open offcanvas
+document.querySelectorAll('#referralTable tbody tr').forEach(row => {
+  row.style.cursor = 'pointer';
+  row.addEventListener('click', function(e) {
+    if (e.target.closest('input, button, a, .form-check-input, form')) return;
+    const id = this.dataset.id;
+    if (!id) return;
+    const panel = document.getElementById('reviewPanelBody');
+    panel.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+    new bootstrap.Offcanvas(document.getElementById('reviewPanel')).show();
+    fetch('/referrals/' + id + '/panel')
+      .then(r => r.text())
+      .then(html => { panel.innerHTML = html; })
+      .catch(() => { panel.innerHTML = '<div class="text-center py-5 text-danger">Failed to load referral.</div>'; });
+  });
 });
 </script>
 {% endblock %}

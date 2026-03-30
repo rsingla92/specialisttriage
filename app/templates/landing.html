@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}SpecialistTriage BC — Specialist Referral Triage{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <!-- Hero -->
+  <div class="text-center mb-5" style="max-width: 700px; margin: 0 auto;">
+    <h1 class="fw-bold mb-3" style="font-family: 'Plus Jakarta Sans', sans-serif; color: #1B6B93;">
+      <i class="bi bi-clipboard2-pulse-fill me-2"></i>SpecialistTriage
+      <span class="badge bg-warning text-dark ms-1" style="font-size: 0.5em; vertical-align: middle;">BC</span>
+    </h1>
+    <p class="lead fw-semibold mb-2">Specialist referral triage for Canadian physicians</p>
+    <p class="text-muted mb-4">Faster triage. Pre-referral pathways. Analytics that prove it's working.</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg px-4"
+         style="background-color: #1B6B93; border-color: #1B6B93;">Start Free</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">Log In</a>
+    </div>
+  </div>
+
+  <!-- Value Props -->
+  <div class="row g-4 mb-5 justify-content-center" style="max-width: 960px; margin: 0 auto;">
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center p-4">
+          <div class="mb-3">
+            <i class="bi bi-speedometer2 fs-1" style="color: #1B6B93;"></i>
+          </div>
+          <h5 class="card-title fw-bold">Efficiency Dashboard</h5>
+          <p class="card-text text-muted small">Category-grouped referrals, batch actions, completeness tracking.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center p-4">
+          <div class="mb-3">
+            <i class="bi bi-signpost-split fs-1" style="color: #1B6B93;"></i>
+          </div>
+          <h5 class="card-title fw-bold">Pre-Referral Pathways</h5>
+          <p class="card-text text-muted small">Guide FPs with condition-specific workup checklists.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center p-4">
+          <div class="mb-3">
+            <i class="bi bi-graph-up-arrow fs-1" style="color: #1B6B93;"></i>
+          </div>
+          <h5 class="card-title fw-bold">Analytics</h5>
+          <p class="card-text text-muted small">Track referral volume, completeness trends, turnaround time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secondary links -->
+  <div class="text-center">
+    <p class="text-muted mb-1">
+      Already have an account? <a href="{{ url_for('auth.login') }}" style="color: #1B6B93;">Log in</a>
+    </p>
+    <p class="text-muted">
+      <a href="/pathways" style="color: #1B6B93;">View public pathways &rarr;</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
