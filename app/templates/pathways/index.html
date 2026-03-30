@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Pre-Referral Pathways – SpecialistTriage BC{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <div class="text-center mb-5">
+    <h1 class="h2 fw-bold">Pre-Referral Pathways</h1>
+    <p class="text-muted">Before referring, please complete the recommended workup for your patient's condition. Based on BC/GPAC and Canadian clinical guidelines.</p>
+  </div>
+
+  {% for spec in specialties %}
+  <h3 class="fw-bold mb-3 mt-4">{{ spec.specialty.name }}
+    {% if spec.specialty.description and 'DRAFT' in spec.specialty.description %}
+      <span class="badge bg-warning text-dark ms-1 fs-6">DRAFT</span>
+    {% endif %}
+  </h3>
+  <div class="row g-3 mb-4">
+    {% for cat in spec.categories %}
+    <div class="col-md-6">
+      <a href="{{ url_for('pathways.pathway', specialty_slug=spec.specialty.slug, category_slug=cat.slug) }}"
+         class="card text-decoration-none h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title fw-bold text-dark">{{ cat.display_name }}</h5>
+          <p class="card-text text-muted small mb-0">
+            {{ cat.workup_items|length }} workup items.
+            {% if cat.guidance and cat.guidance.source %}
+              <br><i class="bi bi-book me-1"></i>{{ cat.guidance.source }}
+            {% endif %}
+          </p>
+        </div>
+        <div class="card-footer bg-white border-0 text-end">
+          <span class="text-primary small">View pathway <i class="bi bi-chevron-right"></i></span>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if not specialties %}
+  <div class="text-center py-5">
+    <p class="text-muted">No pathways configured yet. Run <code>flask seed-specialty</code> to add clinical data.</p>
+  </div>
+  {% endif %}
+
+  <div class="text-center mt-5">
+    <p class="text-muted small">
+      These pathways are based on BC GPAC and Alberta SpecialistLink guidelines.
+      DRAFT pathways need specialist review before clinical use.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -5,6 +5,153 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 
 
+# ---------------------------------------------------------------------------
+# Multi-specialty configuration models
+# ---------------------------------------------------------------------------
+
+class Specialty(db.Model):
+    """A medical specialty (e.g. Urology, Gastroenterology)."""
+
+    __tablename__ = "specialties"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    slug = db.Column(db.String(50), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    categories = db.relationship("ClinicalCategory", backref="specialty", lazy="dynamic")
+    priority_keywords = db.relationship("PriorityKeyword", backref="specialty", lazy="dynamic")
+    triage_configs = db.relationship("TriageConfig", backref="specialty", lazy="dynamic")
+
+    def __repr__(self):
+        return f"<Specialty {self.slug}>"
+
+
+class ClinicalCategory(db.Model):
+    """A clinical category within a specialty (e.g. Hematuria under Urology)."""
+
+    __tablename__ = "clinical_categories"
+    __table_args__ = (
+        db.UniqueConstraint("specialty_id", "slug", name="uq_category_specialty_slug"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=False, index=True)
+    slug = db.Column(db.String(50), nullable=False)
+    display_name = db.Column(db.String(100), nullable=False)
+    priority_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+
+    keywords = db.relationship("CategoryKeyword", backref="category", cascade="all, delete-orphan")
+    workup_items = db.relationship("WorkupItem", backref="category", cascade="all, delete-orphan",
+                                   order_by="WorkupItem.sort_order")
+    guidance = db.relationship("PathwayGuidance", backref="category", uselist=False,
+                               cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ClinicalCategory {self.slug}>"
+
+
+class CategoryKeyword(db.Model):
+    """A keyword used to classify referrals into a clinical category."""
+
+    __tablename__ = "category_keywords"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey("clinical_categories.id"), nullable=False, index=True)
+    keyword = db.Column(db.String(100), nullable=False)
+    use_word_boundary = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<CategoryKeyword '{self.keyword}'>"
+
+
+class WorkupItem(db.Model):
+    """A required workup item for a clinical category."""
+
+    __tablename__ = "workup_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey("clinical_categories.id"), nullable=False, index=True)
+    label = db.Column(db.String(200), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+    is_required = db.Column(db.Boolean, default=True)
+
+    detection_keywords = db.relationship("WorkupKeyword", backref="workup_item",
+                                         cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<WorkupItem '{self.label}'>"
+
+
+class WorkupKeyword(db.Model):
+    """A keyword used to detect if a workup item is present in referral text."""
+
+    __tablename__ = "workup_keywords"
+
+    id = db.Column(db.Integer, primary_key=True)
+    workup_item_id = db.Column(db.Integer, db.ForeignKey("workup_items.id"), nullable=False, index=True)
+    keyword = db.Column(db.String(100), nullable=False)
+    use_word_boundary = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<WorkupKeyword '{self.keyword}'>"
+
+
+class PriorityKeyword(db.Model):
+    """A keyword that triggers urgent/high/inappropriate priority for a specialty."""
+
+    __tablename__ = "priority_keywords"
+
+    id = db.Column(db.Integer, primary_key=True)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=False, index=True)
+    keyword = db.Column(db.String(100), nullable=False)
+    priority_level = db.Column(db.String(20), nullable=False)  # urgent | high | inappropriate
+
+    def __repr__(self):
+        return f"<PriorityKeyword '{self.keyword}' ({self.priority_level})>"
+
+
+class PathwayGuidance(db.Model):
+    """Pre-referral pathway guidance content for a clinical category."""
+
+    __tablename__ = "pathway_guidance"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey("clinical_categories.id"), nullable=False, unique=True)
+    consider_before = db.Column(db.JSON, default=list)
+    refer_if = db.Column(db.Text)
+    additional_notes = db.Column(db.Text)
+    source = db.Column(db.String(200))  # e.g. "BC GPAC Guidelines (2024)"
+    source_url = db.Column(db.String(500))
+
+    def __repr__(self):
+        return f"<PathwayGuidance category={self.category_id}>"
+
+
+class TriageConfig(db.Model):
+    """Per-specialty scoring configuration for the triage engine."""
+
+    __tablename__ = "triage_configs"
+    __table_args__ = (
+        db.UniqueConstraint("specialty_id", "config_key", name="uq_triage_config_specialty_key"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=False, index=True)
+    config_key = db.Column(db.String(100), nullable=False)
+    config_value = db.Column(db.Integer, nullable=False)
+
+    def __repr__(self):
+        return f"<TriageConfig {self.config_key}={self.config_value}>"
+
+
+# ---------------------------------------------------------------------------
+# Core application models
+# ---------------------------------------------------------------------------
+
 class User(UserMixin, db.Model):
     """Represents a portal user (specialist or admin)."""
 
@@ -16,6 +163,7 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="specialist")  # specialist | admin
     specialty = db.Column(db.String(100))
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
     clinic_name = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
@@ -63,6 +211,7 @@ class Referral(db.Model):
     # Specialist assignment
     specialist_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
     specialty_requested = db.Column(db.String(100), nullable=False, default="Urology")
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
 
     # Status and triage
     status = db.Column(
@@ -71,6 +220,10 @@ class Referral(db.Model):
     priority = db.Column(
         db.String(20)
     )  # urgent | high | routine | low | needs_info | inappropriate
+
+    # Clinical classification (Phase 1 pivot)
+    clinical_category = db.Column(db.String(30), index=True)
+    missing_workup = db.Column(db.JSON, default=list)
 
     # Timestamps
     received_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
@@ -121,6 +274,8 @@ class TriageResult(db.Model):
 
     triaged_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     model_version = db.Column(db.String(50), default="rules-v1.0")
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True)
+    triage_config_version = db.Column(db.String(50))
 
     def __repr__(self):
         return f"<TriageResult referral={self.referral_id} score={self.appropriateness_score}>"
@@ -136,6 +291,9 @@ class Feedback(db.Model):
         db.Integer, db.ForeignKey("referrals.id"), nullable=False, unique=True
     )
     specialist_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    batch_action_id = db.Column(
+        db.Integer, db.ForeignKey("batch_actions.id"), nullable=True
+    )
 
     decision = db.Column(
         db.String(30), nullable=False
@@ -151,3 +309,62 @@ class Feedback(db.Model):
 
     def __repr__(self):
         return f"<Feedback referral={self.referral_id} decision={self.decision}>"
+
+
+VALID_CATEGORIES = frozenset({
+    "hematuria", "psa_prostate", "stones", "incontinence",
+    "uti_recurrent", "erectile_dysfunction", "other",
+})
+
+VALID_TEMPLATE_TYPES = frozenset({"needs_info", "accepted", "declined"})
+
+
+class ResponseTemplate(db.Model):
+    """Reusable response templates for specialist feedback by clinical category."""
+
+    __tablename__ = "response_templates"
+    __table_args__ = (
+        db.UniqueConstraint("category", "template_type", "created_by",
+                            name="uq_template_category_type_user"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(30), nullable=False, index=True)
+    template_type = db.Column(db.String(20), nullable=False)  # needs_info | accepted | declined
+    body_text = db.Column(db.Text, nullable=False)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+    def render(self, patient_name="", specialist_name=""):
+        text = self.body_text
+        text = text.replace("[Patient]", patient_name)
+        text = text.replace("[Name]", specialist_name)
+        return text
+
+    def __repr__(self):
+        return f"<ResponseTemplate {self.category}/{self.template_type}>"
+
+
+class BatchAction(db.Model):
+    """Audit trail for batch referral actions."""
+
+    __tablename__ = "batch_actions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    referral_ids = db.Column(db.JSON, nullable=False)
+    action_type = db.Column(db.String(20), nullable=False)  # accepted | needs_info | declined
+    template_id = db.Column(
+        db.Integer, db.ForeignKey("response_templates.id"), nullable=True
+    )
+    executed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    executed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    template = db.relationship("ResponseTemplate", foreign_keys=[template_id])
+    executor = db.relationship("User", foreign_keys=[executed_by])
+    feedback_records = db.relationship("Feedback", backref="batch_action", lazy="dynamic")
+
+    def __repr__(self):
+        return f"<BatchAction {self.action_type} x{len(self.referral_ids or [])}>"

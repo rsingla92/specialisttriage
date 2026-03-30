@@ -1,45 +1,121 @@
-/* SpecialistTriage BC – custom styles */
+/* SpecialistTriage BC – Design System (see DESIGN.md) */
 
+/* --- CSS Custom Properties --- */
+:root {
+  --st-primary: #1B6B93;
+  --st-primary-light: #E8F4F8;
+  --st-primary-dark: #145373;
+  --st-bg: #F8F9FA;
+  --st-surface: #FFFFFF;
+  --st-text: #212529;
+  --st-text-muted: #6C757D;
+  --st-border: #DEE2E6;
+  --st-success: #198754;
+  --st-warning: #D4930D;
+  --st-error: #C62828;
+  --st-info: #0D6EFD;
+  --st-font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --st-mono: 'JetBrains Mono', monospace;
+  --st-radius-sm: 4px;
+  --st-radius-md: 8px;
+  --st-radius-lg: 12px;
+}
+
+/* --- Base --- */
 body {
-  background-color: #f8f9fa;
+  font-family: var(--st-font);
+  background-color: var(--st-bg);
+  color: var(--st-text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-size: 14px;
 }
 
 main {
   flex: 1;
 }
 
+/* --- Bootstrap overrides --- */
+.bg-primary, .navbar.bg-primary { background-color: var(--st-primary) !important; }
+.btn-primary { background-color: var(--st-primary); border-color: var(--st-primary); }
+.btn-primary:hover { background-color: var(--st-primary-dark); border-color: var(--st-primary-dark); }
+.btn-warning { background-color: var(--st-warning); border-color: var(--st-warning); color: white; }
+.btn-warning:hover { background-color: #b87d0b; border-color: #b87d0b; color: white; }
+.btn-danger { background-color: var(--st-error); border-color: var(--st-error); }
+.btn-danger:hover { background-color: #a12020; border-color: #a12020; }
+.text-primary { color: var(--st-primary) !important; }
+.bg-primary.bg-opacity-10 { background-color: var(--st-primary-light) !important; }
+.text-warning { color: var(--st-warning) !important; }
+.text-danger { color: var(--st-error) !important; }
+a { color: var(--st-primary); }
+a:hover { color: var(--st-primary-dark); }
+.nav-tabs .nav-link.active { color: var(--st-primary); border-bottom-color: var(--st-primary); }
+
+/* --- Typography scale --- */
+h1, .h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
+h2, .h2 { font-size: 32px; font-weight: 700; }
+h3, .h3 { font-size: 24px; font-weight: 600; }
+h4, .h4 { font-size: 20px; font-weight: 600; }
+h5, .h5 { font-size: 16px; font-weight: 600; }
+h6, .h6 { font-size: 14px; font-weight: 600; }
+
+/* --- Navbar --- */
 .navbar-brand {
   font-size: 1.15rem;
   letter-spacing: -0.01em;
+  font-weight: 700;
 }
 
-/* Priority colour coding */
-tr[data-priority="urgent"] td:first-child {
-  border-left: 4px solid #dc3545;
-}
-tr[data-priority="high"] td:first-child {
-  border-left: 4px solid #ffc107;
-}
-tr[data-priority="inappropriate"] td:first-child {
-  border-left: 4px solid #6c757d;
-}
-tr[data-priority="needs_info"] td:first-child {
-  border-left: 4px solid #0dcaf0;
+/* --- Container max-width --- */
+.container-fluid {
+  max-width: 1280px;
 }
 
-/* Score progress bars */
-.progress {
-  border-radius: 4px;
-}
-
+/* --- Cards --- */
 .card {
-  border-radius: 0.5rem;
+  border-radius: var(--st-radius-md);
+  border-color: var(--st-border);
 }
 
-/* Triage badge sizing */
+/* --- Progress bars --- */
+.progress {
+  border-radius: var(--st-radius-sm);
+  height: 6px;
+}
+
+/* --- Tables --- */
+.table {
+  font-size: 14px;
+}
+.table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--st-text-muted);
+}
+
+/* --- Tabular numbers for data --- */
+.fs-2, .card-value, [data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Monospace for IDs --- */
+code, .mono {
+  font-family: var(--st-mono);
+}
+
+/* --- Transition defaults --- */
+.btn, .nav-link, .card, a {
+  transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+
+/* --- Triage badge sizing --- */
 .triage-priority-badge {
   font-size: 1rem;
 }
+
+/* --- Alert customization --- */
+.alert-warning { border-color: var(--st-warning); }
+.alert-danger { border-color: var(--st-error); }

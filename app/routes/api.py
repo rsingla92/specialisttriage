@@ -20,6 +20,8 @@ def _referral_to_dict(r: Referral) -> dict:
         "specialty_requested": r.specialty_requested,
         "status": r.status,
         "priority": r.priority,
+        "clinical_category": r.clinical_category,
+        "missing_workup": r.missing_workup or [],
         "received_at": r.received_at.isoformat() if r.received_at else None,
         "triaged_at": r.triaged_at.isoformat() if r.triaged_at else None,
         "triage": _triage_to_dict(r.triage_result) if r.triage_result else None,
@@ -52,6 +54,10 @@ def list_referrals():
     priority_filter = request.args.get("priority")
     if priority_filter:
         query = query.filter_by(priority=priority_filter)
+
+    category_filter = request.args.get("category")
+    if category_filter:
+        query = query.filter_by(clinical_category=category_filter)
 
     referrals = query.order_by(Referral.received_at.desc()).all()
     return jsonify({"referrals": [_referral_to_dict(r) for r in referrals]})
@@ -89,10 +95,22 @@ def stats():
         Referral.status.in_(("accepted", "declined", "redirected"))
     ).count()
 
+    category_rows = (
+        db.session.query(
+            db.func.coalesce(Referral.clinical_category, "other"),
+            func.count(Referral.id),
+        )
+        .filter(Referral.specialist_id == current_user.id)
+        .group_by(Referral.clinical_category)
+        .all()
+    )
+    category_counts: dict[str, int] = {c: n for c, n in category_rows}
+
     return jsonify(
         {
             "total": total,
             "by_priority": priority_counts,
+            "by_category": category_counts,
             "pending": pending,
             "resolved": resolved,
         }
