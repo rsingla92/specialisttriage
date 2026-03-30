@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Join {{ clinic.name }} — ReferralQ{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm mt-5">
+      <div class="card-body p-4">
+        <h2 class="card-title text-center mb-1 fw-bold" style="color: #1B6B93;">
+          <i class="bi bi-clipboard2-pulse-fill me-2"></i>ReferralQ
+        </h2>
+        <p class="text-center text-muted small mb-4">
+          Join <strong>{{ clinic.name }}</strong>
+        </p>
+
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="full_name" class="form-label">Your Name</label>
+            <input type="text" class="form-control" id="full_name" name="full_name" required autofocus>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   value="{{ membership.invite_email or '' }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100"
+                  style="background-color: #1B6B93; border-color: #1B6B93;">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Join Clinic
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

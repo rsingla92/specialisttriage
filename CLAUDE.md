@@ -1,4 +1,4 @@
-# SpecialistTriage BC
+# ReferralQ
 
 ## Design System
 Always read DESIGN.md before making any visual or UI decisions.

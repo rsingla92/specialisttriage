@@ -1,4 +1,4 @@
-# Design System — SpecialistTriage BC
+# Design System — ReferralQ
 
 ## Product Context
 - **What this is:** Multi-specialty referral triage SaaS for BC/Canadian physicians

@@ -24,14 +24,32 @@ _PRIORITY_SORT = case(
 @dashboard_bp.route("/dashboard")
 @login_required
 def index():
-    base_q = Referral.query.filter_by(specialist_id=current_user.id)
+    # Dual-queue support
+    clinic_ids = current_user.active_clinic_ids
+    has_clinics = bool(clinic_ids)
+    tab = request.args.get("tab", "mine")
+
+    if tab == "pool" and clinic_ids:
+        base_q = Referral.query.filter(
+            Referral.clinic_id.in_(clinic_ids),
+            Referral.specialist_id.is_(None),
+        )
+    else:
+        base_q = Referral.query.filter_by(specialist_id=current_user.id)
+
+    # Queue counts
+    pool_count = Referral.query.filter(
+        Referral.clinic_id.in_(clinic_ids),
+        Referral.specialist_id.is_(None),
+    ).count() if clinic_ids else 0
+    mine_count = Referral.query.filter_by(specialist_id=current_user.id).count()
 
     # Category filtering
     category = request.args.get("category")
     if category:
         base_q = base_q.filter_by(clinical_category=category)
 
-    # Stats (always computed on full set, not filtered)
+    # Stats (always computed on user's referrals, not filtered)
     full_q = Referral.query.filter_by(specialist_id=current_user.id)
     stats = {
         "total": full_q.count(),
@@ -78,4 +96,8 @@ def index():
         stats=stats,
         category_counts=category_counts,
         current_category=category,
+        tab=tab,
+        has_clinics=has_clinics,
+        pool_count=pool_count,
+        mine_count=mine_count,
     )

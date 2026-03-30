@@ -2,7 +2,7 @@
 import json
 import pytest
 from app import create_app, db
-from app.models import User, Referral, ResponseTemplate, Feedback
+from app.models import User, Referral, ResponseTemplate, Feedback, Clinic, ClinicMembership, Specialty
 
 
 @pytest.fixture()
@@ -52,7 +52,7 @@ class TestAuth:
     def test_login_page_loads(self, client):
         resp = client.get("/login")
         assert resp.status_code == 200
-        assert b"SpecialistTriage" in resp.data
+        assert b"ReferralQ" in resp.data
 
     def test_register_page_loads(self, client):
         resp = client.get("/register")
@@ -574,3 +574,175 @@ class TestSpecialtySeeder:
         seed_all_specialties(db)
         seed_all_specialties(db)
         assert Specialty.query.count() == 3
+
+
+# --- Phase 3 tests ---
+
+def _create_clinic_for_specialist(specialist_id):
+    """Helper to create a clinic and membership for a specialist."""
+    clinic = Clinic(name="Test Clinic", slug="test-clinic",
+                    settings={"queue_mode": "hybrid", "auto_triage": True})
+    db.session.add(clinic)
+    db.session.flush()
+    membership = ClinicMembership(user_id=specialist_id, clinic_id=clinic.id, role="owner")
+    db.session.add(membership)
+    db.session.commit()
+    return clinic
+
+
+class TestLanding:
+    def test_landing_page_public(self, client, app):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert b"ReferralQ" in resp.data or b"specialist" in resp.data.lower()
+
+    def test_landing_redirects_when_authenticated(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        resp = client.get("/")
+        assert resp.status_code == 302
+
+
+class TestSignup:
+    def _seed_specialties(self):
+        from app.services.specialty_seeder import seed_all_specialties
+        seed_all_specialties(db)
+
+    def test_signup_page_loads(self, client, app):
+        self._seed_specialties()
+        resp = client.get("/signup")
+        assert resp.status_code == 200
+
+    def test_signup_creates_clinic_and_user(self, client, app):
+        self._seed_specialties()
+        spec = Specialty.query.first()
+        resp = client.post("/signup", data={
+            "clinic_name": "Test Urology Clinic",
+            "specialty_id": str(spec.id),
+            "full_name": "Dr. Test",
+            "email": "test@signup.com",
+            "password": "testpass123",
+            "confirm_password": "testpass123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert Clinic.query.filter_by(slug="test-urology-clinic").first() is not None
+        assert User.query.filter_by(email="test@signup.com").first() is not None
+
+
+class TestDualQueue:
+    def test_dashboard_shows_queue_tabs(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        assert b"Clinic Queue" in resp.data
+        assert b"My Referrals" in resp.data
+
+    def test_pool_tab_shows_unclaimed(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        clinic = _create_clinic_for_specialist(specialist)
+        # Create a pool referral (no specialist_id)
+        from datetime import date
+        ref = Referral(
+            patient_first_name="Pool", patient_last_name="Patient",
+            patient_dob=date(1990, 1, 1), referring_physician_name="Dr Z",
+            chief_complaint="Test pool", clinic_id=clinic.id, specialist_id=None,
+        )
+        db.session.add(ref)
+        db.session.commit()
+        resp = client.get("/dashboard?tab=pool")
+        assert resp.status_code == 200
+
+
+class TestClaimFlow:
+    def test_claim_assigns_referral(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        clinic = _create_clinic_for_specialist(specialist)
+        from datetime import date
+        ref = Referral(
+            patient_first_name="Claim", patient_last_name="Test",
+            patient_dob=date(1990, 1, 1), referring_physician_name="Dr Z",
+            chief_complaint="Test claim", clinic_id=clinic.id, specialist_id=None,
+        )
+        db.session.add(ref)
+        db.session.commit()
+        resp = client.post(f"/referrals/{ref.id}/claim", follow_redirects=True)
+        assert resp.status_code == 200
+        updated = db.session.get(Referral, ref.id)
+        assert updated.specialist_id == specialist
+
+
+class TestQuickReviewPanel:
+    def test_panel_returns_fragment(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+        referral = Referral.query.filter_by(specialist_id=specialist).first()
+        resp = client.get(f"/referrals/{referral.id}/panel")
+        assert resp.status_code == 200
+        assert b"<!DOCTYPE html>" not in resp.data
+        assert referral.patient_first_name.encode() in resp.data
+
+    def test_panel_requires_login(self, client, app):
+        resp = client.get("/referrals/1/panel")
+        assert resp.status_code in (302, 401)
+
+    def test_panel_shows_triage_scores(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        client.post("/referrals/import", follow_redirects=True)
+        referral = Referral.query.filter_by(specialist_id=specialist).first()
+        resp = client.get(f"/referrals/{referral.id}/panel")
+        assert b"Appropriateness" in resp.data or b"appropriateness" in resp.data.lower()
+
+
+class TestClinicManagement:
+    def test_team_page_requires_login(self, client, app):
+        resp = client.get("/clinic/team")
+        assert resp.status_code == 302
+
+    def test_team_page_loads(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.get("/clinic/team")
+        assert resp.status_code == 200
+        assert b"Team Management" in resp.data
+
+    def test_settings_page_loads(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.get("/clinic/settings")
+        assert resp.status_code == 200
+        assert b"Queue Mode" in resp.data
+
+    def test_update_queue_mode(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        clinic = _create_clinic_for_specialist(specialist)
+        resp = client.post("/clinic/settings", data={
+            "csrf_token": _get_csrf(client, "/clinic/settings"),
+            "queue_mode": "shared",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        updated = db.session.get(Clinic, clinic.id)
+        assert updated.queue_mode == "shared"
+
+    def test_invite_generates_urls(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.post("/clinic/invite",
+            data='{"emails": "dr.smith@example.com, dr.jones@example.com"}',
+            content_type="application/json",
+            headers={"X-CSRFToken": _get_csrf(client, "/clinic/team")},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"]
+        assert len(data["invite_urls"]) == 2
+
+
+def _get_csrf(client, url="/dashboard"):
+    resp = client.get(url)
+    data = resp.data.decode()
+    import re
+    match = re.search(r'name="csrf-token"\s+content="([^"]+)"', data)
+    if match:
+        return match.group(1)
+    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', data)
+    return match.group(1) if match else ""

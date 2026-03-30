@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Team – {{ clinic.name }} – ReferralQ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-0 fw-bold">{{ clinic.name }}</h1>
+    <p class="text-muted mb-0">Team Management</p>
+  </div>
+  {% if is_admin %}
+  <a href="{{ url_for('clinic.settings') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-gear me-1"></i>Settings
+  </a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white"><h6 class="mb-0">Active Members</h6></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        {% if m.user %}
+        <tr>
+          <td><strong>{{ m.user.full_name }}</strong></td>
+          <td class="text-muted small">{{ m.user.email }}</td>
+          <td><span class="badge bg-secondary">{{ m.role|title }}</span></td>
+          <td class="text-muted small">{{ m.joined_at.strftime('%b %d, %Y') if m.joined_at else '—' }}</td>
+          <td>
+            {% if is_admin and m.user_id != current_user.id %}
+            <form action="{{ url_for('clinic.remove_member') }}" method="post" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="user_id" value="{{ m.user_id }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger"
+                      onclick="return confirm('Remove {{ m.user.full_name }}?')">Remove</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pending and is_admin %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white"><h6 class="mb-0">Pending Invites</h6></div>
+  <div class="card-body">
+    {% for m in pending %}
+    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+      <span class="text-muted small">Invite link generated (token: {{ m.invite_token[:8] }}...)</span>
+      <span class="badge bg-warning text-dark">Pending</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

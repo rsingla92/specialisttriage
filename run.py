@@ -5,6 +5,7 @@ from app.models import (
     User, Referral, TriageResult, Feedback, ResponseTemplate, BatchAction,
     Specialty, ClinicalCategory, CategoryKeyword, WorkupItem, WorkupKeyword,
     PriorityKeyword, PathwayGuidance, TriageConfig,
+    Clinic, ClinicMembership,
 )
 
 app = create_app(os.environ.get("FLASK_ENV", "default"))
@@ -37,6 +38,20 @@ def seed_demo():
     # This avoids shipping a publicly-known fixed credential even in development/staging.
     password = _secrets.token_urlsafe(12)
 
+    # Create or find the demo clinic
+    urology = Specialty.query.filter_by(slug="urology").first()
+    clinic = Clinic.query.filter_by(slug="lions-gate-urology").first()
+    if not clinic:
+        clinic = Clinic(
+            name="Lions Gate Hospital – Urology",
+            slug="lions-gate-urology",
+            specialty_id=urology.id if urology else None,
+            address="231 15th St E, North Vancouver, BC",
+        )
+        db.session.add(clinic)
+        db.session.flush()
+        print(f"Demo clinic created: {clinic.name}")
+
     user = User(
         email="demo@example.com",
         full_name="Dr. Alex Nguyen",
@@ -46,8 +61,16 @@ def seed_demo():
     )
     user.set_password(password)
     db.session.add(user)
+    db.session.flush()
+
+    # Link user to clinic as owner
+    membership = ClinicMembership(
+        user_id=user.id, clinic_id=clinic.id, role="owner",
+    )
+    db.session.add(membership)
     db.session.commit()
     print(f"Demo user created: {user.email}")
+    print(f"  Clinic: {clinic.name} (role: owner)")
     print(f"  Temporary password: {password}")
     print("  (This password is shown only once – save it now.)")
 

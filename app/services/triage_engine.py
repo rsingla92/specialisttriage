@@ -471,6 +471,38 @@ def triage_referral(referral: ReferralData, specialty_id: int | None = None) -> 
     # 0. Clinical classification
     # ------------------------------------------------------------------
     output.clinical_category = classify_category(all_text, ruleset)
+
+    # LLM fallback: if keyword matcher returns "other", try LLM classification
+    if output.clinical_category == "other":
+        from app.services.llm_classifier import is_llm_enabled, classify_with_llm
+        if is_llm_enabled():
+            cat_list = [
+                {"slug": slug, "display_name": slug.replace("_", " ").title()}
+                for slug, _ in (ruleset.categories if ruleset.categories else _CATEGORY_KEYWORDS)
+            ]
+            llm_result = classify_with_llm(all_text, cat_list,
+                                           specialty_name=referral.specialty_requested)
+            if llm_result and llm_result.category != "other":
+                if llm_result.confidence >= 0.7:
+                    output.clinical_category = llm_result.category
+                    output.flags.append(
+                        f"🤖 LLM-classified as {llm_result.category} "
+                        f"(confidence: {llm_result.confidence:.0%})"
+                    )
+                    output.model_version = "rules-v1.0+llm-haiku"
+                elif llm_result.confidence >= 0.4:
+                    output.clinical_category = llm_result.category
+                    output.flags.append(
+                        f"⚠️ LLM-classified as {llm_result.category} "
+                        f"(medium confidence: {llm_result.confidence:.0%}) — verify manually"
+                    )
+                    output.model_version = "rules-v1.0+llm-haiku-low"
+                else:
+                    output.flags.append(
+                        f"ℹ️ LLM suggested {llm_result.category} but confidence too low "
+                        f"({llm_result.confidence:.0%}) — manual review needed"
+                    )
+
     output.missing_workup = detect_missing_workup(output.clinical_category, all_text, ruleset)
 
     # Flag secondary categories if multiple match

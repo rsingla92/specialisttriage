@@ -50,6 +50,7 @@ def create_app(config_name="default"):
     from app.routes.pathways import pathways_bp
     from app.routes.analytics import analytics_bp
     from app.routes.admin import admin_bp
+    from app.routes.clinic import clinic_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(referrals_bp, url_prefix="/referrals")
@@ -59,5 +60,6 @@ def create_app(config_name="default"):
     app.register_blueprint(pathways_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(clinic_bp, url_prefix="/clinic")
 
     return app

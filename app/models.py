@@ -149,6 +149,70 @@ class TriageConfig(db.Model):
 
 
 # ---------------------------------------------------------------------------
+# Clinic / Organization models
+# ---------------------------------------------------------------------------
+
+class Clinic(db.Model):
+    """A medical clinic or specialist practice (multi-tenant entity)."""
+
+    __tablename__ = "clinics"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
+    address = db.Column(db.String(500))
+    phone = db.Column(db.String(20))
+    fax = db.Column(db.String(20))
+    ocean_md_api_key = db.Column(db.String(500))
+    settings = db.Column(db.JSON, default=lambda: {
+        "queue_mode": "hybrid",
+        "auto_triage": True,
+    })
+    subscription_tier = db.Column(db.String(20), default="free")
+    subscription_status = db.Column(db.String(20), default="active")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_active = db.Column(db.Boolean, default=True)
+
+    specialty = db.relationship("Specialty", foreign_keys=[specialty_id])
+    memberships = db.relationship("ClinicMembership", backref="clinic", lazy="dynamic")
+    referrals = db.relationship("Referral", backref="clinic", lazy="dynamic")
+
+    @property
+    def queue_mode(self):
+        return (self.settings or {}).get("queue_mode", "hybrid")
+
+    def __repr__(self):
+        return f"<Clinic {self.slug}>"
+
+
+class ClinicMembership(db.Model):
+    """Links a user to a clinic with a role."""
+
+    __tablename__ = "clinic_memberships"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "clinic_id", name="uq_user_clinic"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey("clinics.id"), nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False, default="specialist")  # owner | admin | specialist | viewer
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_active = db.Column(db.Boolean, default=True)
+    invite_token = db.Column(db.String(100), unique=True, nullable=True)
+
+    user = db.relationship("User", backref=db.backref("memberships", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<ClinicMembership user={self.user_id} clinic={self.clinic_id} role={self.role}>"
+
+
+CLINIC_ROLES = frozenset({"owner", "admin", "specialist", "viewer"})
+CLINIC_ADMIN_ROLES = frozenset({"owner", "admin"})
+
+
+# ---------------------------------------------------------------------------
 # Core application models
 # ---------------------------------------------------------------------------
 
@@ -175,6 +239,26 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def active_clinic_ids(self):
+        return [m.clinic_id for m in self.memberships.filter_by(is_active=True)]
+
+    @property
+    def active_clinics(self):
+        return [m.clinic for m in self.memberships.filter_by(is_active=True)]
+
+    @property
+    def primary_clinic(self):
+        m = self.memberships.filter_by(is_active=True).first()
+        return m.clinic if m else None
+
+    def clinic_role(self, clinic_id):
+        m = self.memberships.filter_by(clinic_id=clinic_id, is_active=True).first()
+        return m.role if m else None
+
+    def is_clinic_admin(self, clinic_id):
+        return self.clinic_role(clinic_id) in CLINIC_ADMIN_ROLES
 
     def __repr__(self):
         return f"<User {self.email}>"
@@ -208,8 +292,10 @@ class Referral(db.Model):
     allergies = db.Column(db.Text)
     relevant_investigations = db.Column(db.Text)
 
-    # Specialist assignment
-    specialist_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    # Clinic and specialist assignment
+    clinic_id = db.Column(db.Integer, db.ForeignKey("clinics.id"), nullable=True, index=True)
+    specialist_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    assigned_at = db.Column(db.DateTime)  # when specialist claimed from pool
     specialty_requested = db.Column(db.String(100), nullable=False, default="Urology")
     specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
 
