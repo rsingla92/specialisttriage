@@ -1,27 +1,18 @@
-# SpecialistTriage BC
+# ReferralQ
 
-> **Reducing inappropriate specialist referrals in British Columbia.**
+> **Specialist referral triage for Canadian physicians.** A WhiteCoat Prep product.
 
-A SaaS triage tool that sits between EMRs and specialists, using OceanMD's API to bulk-process and triage inbound referrals. Designed initially for BC urologists who each receive 70–100 referrals/week with an estimated 30–40% inappropriate rate.
+Multi-specialty referral triage SaaS that helps specialist clinics process referrals faster and gives family physicians pre-referral pathway guidance. Built for the Canadian healthcare system, starting with BC.
 
-## Problem
+## What It Does
 
-- Specialists receive high volumes of incomplete or poorly worked-up referrals
-- No systematic triage or feedback to referring physicians
-- Result: longer patient wait times, specialist burnout, and frustrated family doctors
-
-## Solution
-
-SpecialistTriage BC integrates with [OceanMD](https://ocean.cognisantmd.com/) (BC's primary e-referral platform) to:
-
-1. **Bulk-import** pending referrals from OceanMD
-2. **Auto-triage** each referral using BC/GPAC guideline-informed rules:
-   - Appropriateness score (0–100)
-   - Completeness score (0–100) – flags missing investigations or clinical history
-   - Urgency score (0–100) – detects red-flag symptoms
-   - Priority classification: `urgent` | `high` | `routine` | `low` | `needs_info` | `inappropriate`
-3. **Present** a prioritised dashboard to the specialist
-4. **Send structured feedback** to the referring physician via OceanMD (decision: accepted / declined / needs info / redirect)
+- **Efficiency Dashboard** — Category-grouped referrals with batch actions, completeness tracking, and quick review panel
+- **Pre-Referral Pathways** — Public, condition-specific workup checklists for family physicians (no login required)
+- **Multi-Specialty Support** — Urology, Gastroenterology, and Orthopedics with DB-backed clinical rules
+- **Analytics** — Referral volume trends, completeness scores, turnaround time, outcome rates
+- **Clinic Management** — Multi-user clinics with shared referral queues, team management, and role-based access
+- **LLM Classification** — Claude Haiku fallback for referrals that don't match keyword rules
+- **Editable Rules** — Specialists customize workup requirements, classification keywords, and pathway guidance
 
 ## Tech Stack
 
@@ -31,8 +22,10 @@ SpecialistTriage BC integrates with [OceanMD](https://ocean.cognisantmd.com/) (B
 | Database | SQLite (dev) / PostgreSQL-compatible via SQLAlchemy |
 | Auth | Flask-Login (session-based) |
 | Migrations | Flask-Migrate / Alembic |
-| Frontend | Bootstrap 5, Vanilla JS |
+| Frontend | Bootstrap 5, Chart.js, Vanilla JS |
+| Design System | Plus Jakarta Sans, #1B6B93 teal (see DESIGN.md) |
 | External API | OceanMD REST API (mock included for dev/test) |
+| LLM | Anthropic Claude Haiku (optional, for classification fallback) |
 
 ## Quick Start
 
@@ -40,21 +33,58 @@ SpecialistTriage BC integrates with [OceanMD](https://ocean.cognisantmd.com/) (B
 # 1. Clone and install
 git clone <repo>
 cd specialisttriage
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 # 2. Set up the database
 flask --app run.py db upgrade
 
-# 3. Create a demo specialist account
-flask --app run.py seed-demo
+# 3. Seed data
+flask --app run.py seed-specialty    # 3 specialties with clinical rules
+flask --app run.py seed-demo         # Demo clinic + specialist account
+flask --app run.py seed-templates    # Response templates
 
 # 4. Run the development server
 python run.py
 ```
 
-Then open http://127.0.0.1:5000 and log in with `demo@example.com` using the one-time password printed by `flask --app run.py seed-demo` (the password is shown only once – save it when you run the command).
+Then open http://127.0.0.1:5000 and log in with the credentials shown by `seed-demo`.
 
-Click **Import from OceanMD** to load 5 sample BC urology referrals (mock data) and see the auto-triage in action.
+## Project Structure
+
+```
+app/
+├── models.py              # SQLAlchemy models (User, Referral, Clinic, Specialty, etc.)
+├── routes/
+│   ├── auth.py            # Login / logout / register / signup / onboarding / invite
+│   ├── dashboard.py       # Main referral dashboard (dual-queue)
+│   ├── referrals.py       # Import, detail, retriage, feedback, batch, claim, panel
+│   ├── pathways.py        # Public FP pre-referral pathway pages
+│   ├── analytics.py       # Analytics API + dashboard
+│   ├── admin.py           # Clinical rules management
+│   ├── clinic.py          # Clinic team + settings management
+│   ├── templates.py       # Response template CRUD
+│   └── api.py             # JSON REST API
+├── services/
+│   ├── triage_engine.py   # Rule-based triage scoring (DB-backed + hardcoded fallback)
+│   ├── llm_classifier.py  # Claude Haiku classification fallback
+│   ├── ocean_md.py        # OceanMD API client + mock data
+│   └── specialty_seeder.py # Seed specialties from guidelines
+├── templates/             # Jinja2 / Bootstrap 5 HTML
+└── static/                # CSS (design system) + JS
+tests/
+├── test_triage_engine.py  # 45 tests: classification, workup, scoring, LLM, ruleset
+├── test_ocean_md.py       # 14 tests: mock mode, live API parsing
+└── test_routes.py         # 66 tests: auth, dashboard, batch, clinic, analytics, pathways
+```
+
+## Running Tests
+
+```bash
+python -m pytest -v
+```
+
+125 tests covering triage engine, OceanMD service, all routes, clinic management, analytics, and LLM classification.
 
 ## Configuration
 
@@ -66,47 +96,7 @@ Copy `.env.example` to `.env` and set:
 | `DATABASE_URL` | SQLAlchemy DB URL (default: SQLite) |
 | `OCEAN_MD_API_KEY` | OceanMD API key (empty = mock mode) |
 | `OCEAN_MD_BASE_URL` | OceanMD API base URL |
-
-## Running Tests
-
-```bash
-python -m pytest -v
-```
-
-55 tests cover:
-- Triage engine (urgency, completeness, appropriateness, priority classification)
-- OceanMD service (mock mode, live API error handling, response parsing)
-- Flask routes (auth, dashboard, referral import/detail/retriage, feedback, REST API)
-
-## Project Structure
-
-```
-app/
-├── models.py              # SQLAlchemy models (User, Referral, TriageResult, Feedback)
-├── routes/
-│   ├── auth.py            # Login / logout / register
-│   ├── dashboard.py       # Main referral dashboard
-│   ├── referrals.py       # Import, detail, retriage, feedback
-│   └── api.py             # JSON REST API
-├── services/
-│   ├── triage_engine.py   # Rule-based triage scoring (GPAC-informed)
-│   └── ocean_md.py        # OceanMD API client + mock data
-├── templates/             # Jinja2 / Bootstrap 5 HTML
-└── static/                # CSS + JS
-tests/
-├── test_triage_engine.py  # Triage engine unit tests
-├── test_ocean_md.py       # OceanMD service tests
-└── test_routes.py         # Flask integration tests
-```
-
-## Roadmap
-
-- [ ] Machine-learning triage model trained on historical referral outcomes
-- [ ] Multi-specialty support beyond Urology
-- [ ] Two-way OceanMD integration (real-time webhooks)
-- [ ] Referring physician portal (view feedback history, compliance metrics)
-- [ ] Analytics dashboard (inappropriate referral rate trends, wait-time impact)
-- [ ] EMR-agnostic FHIR adapter
+| `ANTHROPIC_API_KEY` | Anthropic API key (optional, for LLM classification) |
 
 ## License
 
