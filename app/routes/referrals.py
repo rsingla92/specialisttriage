@@ -29,7 +29,7 @@ def _run_triage(referral: Referral) -> TriageResult:
         patient_age=referral.patient_age,
         specialty_requested=referral.specialty_requested or "Urology",
     )
-    output = triage_referral(rd)
+    output = triage_referral(rd, specialty_id=referral.specialty_id)
 
     referral.clinical_category = output.clinical_category
     referral.missing_workup = output.missing_workup
