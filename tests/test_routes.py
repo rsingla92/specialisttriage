@@ -52,7 +52,7 @@ class TestAuth:
     def test_login_page_loads(self, client):
         resp = client.get("/login")
         assert resp.status_code == 200
-        assert b"SpecialistTriage" in resp.data
+        assert b"ReferralQ" in resp.data
 
     def test_register_page_loads(self, client):
         resp = client.get("/register")
@@ -594,7 +594,7 @@ class TestLanding:
     def test_landing_page_public(self, client, app):
         resp = client.get("/")
         assert resp.status_code == 200
-        assert b"SpecialistTriage" in resp.data or b"specialist" in resp.data.lower()
+        assert b"ReferralQ" in resp.data or b"specialist" in resp.data.lower()
 
     def test_landing_redirects_when_authenticated(self, client, specialist, app):
         login_specialist(client, app, specialist)
@@ -691,3 +691,58 @@ class TestQuickReviewPanel:
         referral = Referral.query.filter_by(specialist_id=specialist).first()
         resp = client.get(f"/referrals/{referral.id}/panel")
         assert b"Appropriateness" in resp.data or b"appropriateness" in resp.data.lower()
+
+
+class TestClinicManagement:
+    def test_team_page_requires_login(self, client, app):
+        resp = client.get("/clinic/team")
+        assert resp.status_code == 302
+
+    def test_team_page_loads(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.get("/clinic/team")
+        assert resp.status_code == 200
+        assert b"Team Management" in resp.data
+
+    def test_settings_page_loads(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.get("/clinic/settings")
+        assert resp.status_code == 200
+        assert b"Queue Mode" in resp.data
+
+    def test_update_queue_mode(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        clinic = _create_clinic_for_specialist(specialist)
+        resp = client.post("/clinic/settings", data={
+            "csrf_token": _get_csrf(client, "/clinic/settings"),
+            "queue_mode": "shared",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        updated = db.session.get(Clinic, clinic.id)
+        assert updated.queue_mode == "shared"
+
+    def test_invite_generates_urls(self, client, specialist, app):
+        login_specialist(client, app, specialist)
+        _create_clinic_for_specialist(specialist)
+        resp = client.post("/clinic/invite",
+            data='{"emails": "dr.smith@example.com, dr.jones@example.com"}',
+            content_type="application/json",
+            headers={"X-CSRFToken": _get_csrf(client, "/clinic/team")},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"]
+        assert len(data["invite_urls"]) == 2
+
+
+def _get_csrf(client, url="/dashboard"):
+    resp = client.get(url)
+    data = resp.data.decode()
+    import re
+    match = re.search(r'name="csrf-token"\s+content="([^"]+)"', data)
+    if match:
+        return match.group(1)
+    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', data)
+    return match.group(1) if match else ""

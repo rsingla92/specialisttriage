@@ -195,7 +195,7 @@ class ClinicMembership(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     clinic_id = db.Column(db.Integer, db.ForeignKey("clinics.id"), nullable=False, index=True)
     role = db.Column(db.String(20), nullable=False, default="specialist")  # owner | admin | specialist | viewer
     joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
