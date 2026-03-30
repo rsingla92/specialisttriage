@@ -6,30 +6,35 @@
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{ url_for('pathways.index') }}">Pathways</a></li>
+      <li class="breadcrumb-item">{{ specialty.name }}</li>
       <li class="breadcrumb-item active">{{ label }}</li>
     </ol>
   </nav>
 
   <h1 class="h3 fw-bold mb-1">{{ label }}</h1>
-  <p class="text-muted mb-4">Before referring, please complete these steps. Based on BC/GPAC guidelines.</p>
+  <p class="text-muted mb-4">Before referring, please complete these steps.
+    {% if source %}<br><i class="bi bi-book me-1"></i>{{ source }}{% endif %}
+  </p>
 
   {# Step 1: Required workup #}
+  {% if workup_items %}
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-primary text-white">
       <h5 class="mb-0"><i class="bi bi-1-circle me-2"></i>Required Workup</h5>
     </div>
     <div class="card-body">
       <p class="small text-muted mb-3">Complete before considering referral:</p>
-      {% for label_text, keywords in workup_items %}
+      {% for wi in workup_items %}
       <div class="form-check mb-2">
         <input class="form-check-input" type="checkbox" id="workup-{{ loop.index }}">
         <label class="form-check-label" for="workup-{{ loop.index }}">
-          {{ label_text }}
+          {{ wi.label }}
         </label>
       </div>
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 
   {# Step 2: Consider before referring #}
   {% if consider_before %}
@@ -63,7 +68,6 @@
 
   <div class="text-center mt-4">
     <p class="text-muted small">
-      These pathways are endorsed by the North Shore urology team.
       <a href="{{ url_for('pathways.index') }}">Back to all pathways</a>
     </p>
   </div>

@@ -1,7 +1,11 @@
 """Application entry point."""
 import os
 from app import create_app, db
-from app.models import User, Referral, TriageResult, Feedback, ResponseTemplate, BatchAction
+from app.models import (
+    User, Referral, TriageResult, Feedback, ResponseTemplate, BatchAction,
+    Specialty, ClinicalCategory, CategoryKeyword, WorkupItem, WorkupKeyword,
+    PriorityKeyword, PathwayGuidance, TriageConfig,
+)
 
 app = create_app(os.environ.get("FLASK_ENV", "default"))
 
@@ -10,7 +14,8 @@ app = create_app(os.environ.get("FLASK_ENV", "default"))
 def make_shell_context():
     return {"db": db, "User": User, "Referral": Referral,
             "TriageResult": TriageResult, "Feedback": Feedback,
-            "ResponseTemplate": ResponseTemplate, "BatchAction": BatchAction}
+            "ResponseTemplate": ResponseTemplate, "BatchAction": BatchAction,
+            "Specialty": Specialty, "ClinicalCategory": ClinicalCategory}
 
 
 @app.cli.command("seed-demo")
@@ -88,6 +93,13 @@ def seed_templates():
 
     db.session.commit()
     print(f"Created {created} default template(s) ({len(defaults) - created} already existed).")
+
+
+@app.cli.command("seed-specialty")
+def seed_specialty_cmd():
+    """Seed all specialties with their clinical rules from built-in data."""
+    from app.services.specialty_seeder import seed_all_specialties
+    seed_all_specialties(db)
 
 
 if __name__ == "__main__":
