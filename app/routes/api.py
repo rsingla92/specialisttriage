@@ -1,11 +1,24 @@
 """JSON REST API routes for the specialist triage application."""
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, text
 from app import db
 from app.models import Referral, TriageResult
 
 api_bp = Blueprint("api", __name__)
+
+
+@api_bp.route("/health")
+def health():
+    """Health-check endpoint for load-balancer probes."""
+    from sqlalchemy.exc import OperationalError, DatabaseError
+    try:
+        db.session.execute(text("SELECT 1"))
+        db_ok = True
+    except (OperationalError, DatabaseError):
+        db_ok = False
+    status = "ok" if db_ok else "degraded"
+    return jsonify({"status": status, "db": db_ok}), 200 if db_ok else 503
 
 
 def _referral_to_dict(r: Referral) -> dict:
@@ -66,7 +79,9 @@ def list_referrals():
 @api_bp.route("/referrals/<int:referral_id>")
 @login_required
 def get_referral(referral_id):
-    referral = Referral.query.get_or_404(referral_id)
+    referral = db.session.get(Referral, referral_id)
+    if referral is None:
+        abort(404)
     if referral.specialist_id != current_user.id and current_user.role != "admin":
         abort(403)
     return jsonify(_referral_to_dict(referral))

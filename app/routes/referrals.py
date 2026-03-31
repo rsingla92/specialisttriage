@@ -2,6 +2,7 @@
 from datetime import datetime, date, timezone
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import Referral, TriageResult, Feedback, ResponseTemplate, BatchAction
@@ -149,11 +150,37 @@ def _can_access_referral(referral):
     return False
 
 
+def _accessible_referrals_query(referral_ids: list[int]):
+    """Return a Query scoped to referrals the current user may access.
+
+    Mirrors the access-control logic of :func:`_can_access_referral` but as a
+    single SQL filter so it can be used efficiently in batch operations.
+    """
+    if current_user.role == "admin":
+        return Referral.query.filter(Referral.id.in_(referral_ids))
+    clinic_ids = current_user.active_clinic_ids
+    conditions = [Referral.specialist_id == current_user.id]
+    if clinic_ids:
+        conditions.append(Referral.clinic_id.in_(clinic_ids))
+    return Referral.query.filter(
+        Referral.id.in_(referral_ids),
+        or_(*conditions),
+    )
+
+
+def _get_referral_or_404(referral_id: int) -> Referral:
+    """Return the Referral with the given id, or abort with 404."""
+    referral = db.session.get(Referral, referral_id)
+    if referral is None:
+        abort(404)
+    return referral
+
+
 @referrals_bp.route("/<int:referral_id>/claim", methods=["POST"])
 @login_required
 def claim_referral(referral_id):
     """Claim a referral from the clinic pool."""
-    referral = Referral.query.get_or_404(referral_id)
+    referral = _get_referral_or_404(referral_id)
     if referral.clinic_id not in current_user.active_clinic_ids:
         abort(403)
     if referral.specialist_id is not None:
@@ -170,7 +197,7 @@ def claim_referral(referral_id):
 @login_required
 def referral_panel(referral_id):
     """Return referral details as HTML fragment for the quick review panel."""
-    referral = Referral.query.get_or_404(referral_id)
+    referral = _get_referral_or_404(referral_id)
     if not _can_access_referral(referral):
         abort(403)
     return render_template("referrals/panel.html", referral=referral)
@@ -179,7 +206,7 @@ def referral_panel(referral_id):
 @referrals_bp.route("/<int:referral_id>")
 @login_required
 def detail(referral_id):
-    referral = Referral.query.get_or_404(referral_id)
+    referral = _get_referral_or_404(referral_id)
     if not _can_access_referral(referral):
         abort(403)
     return render_template("referrals/detail.html", referral=referral)
@@ -188,7 +215,7 @@ def detail(referral_id):
 @referrals_bp.route("/<int:referral_id>/retriage", methods=["POST"])
 @login_required
 def retriage(referral_id):
-    referral = Referral.query.get_or_404(referral_id)
+    referral = _get_referral_or_404(referral_id)
     if not _can_access_referral(referral):
         abort(403)
 
@@ -206,7 +233,7 @@ def retriage(referral_id):
 @referrals_bp.route("/<int:referral_id>/feedback", methods=["GET", "POST"])
 @login_required
 def send_feedback(referral_id):
-    referral = Referral.query.get_or_404(referral_id)
+    referral = _get_referral_or_404(referral_id)
     if not _can_access_referral(referral):
         abort(403)
 
@@ -298,11 +325,9 @@ def batch_action():
     if action_type not in _ALLOWED_DECISIONS:
         return jsonify({"error": "Invalid action type"}), 400
 
-    # Ownership check: only process referrals belonging to current user
-    owned = Referral.query.filter(
-        Referral.id.in_(referral_ids),
-        Referral.specialist_id == current_user.id,
-    ).all()
+    # Ownership check: mirror _can_access_referral() – include pool referrals
+    # that belong to the user's active clinics, just as individual access does.
+    owned = _accessible_referrals_query(referral_ids).all()
     owned_map = {r.id: r for r in owned}
     rejected_ids = [rid for rid in referral_ids if rid not in owned_map]
 
@@ -338,11 +363,6 @@ def batch_action():
         # Skip referrals that already have feedback
         if referral.feedback:
             results.append({"id": rid, "status": "skipped", "reason": "already_actioned"})
-            continue
-
-        # Skip ED referrals for batch actions
-        if referral.clinical_category == "erectile_dysfunction":
-            results.append({"id": rid, "status": "skipped", "reason": "ed_referral"})
             continue
 
         # Build message from template or default
