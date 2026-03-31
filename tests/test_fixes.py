@@ -135,7 +135,7 @@ class TestSessionGet:
 
         legacy_warnings = [
             w for w in recwarn.list
-            if "LegacyAPIWarning" in str(type(w.category))
+            if getattr(w.category, "__name__", "") == "LegacyAPIWarning"
             or "Query.get" in str(w.message)
         ]
         assert legacy_warnings == [], (
@@ -406,6 +406,42 @@ class TestAdminInputValidation:
         assert resp.status_code == 200
         assert b"only contain" in resp.data.lower() or b"letters" in resp.data.lower()
         assert b"<b>" not in resp.data
+
+    def test_workup_detection_keywords_with_script_tag_rejected(self, client, specialist, app):
+        """Detection keywords (comma-separated) must also pass _LABEL_RE validation."""
+        self._seed_and_login(client, specialist, app)
+        resp = client.post(
+            "/admin/category/hematuria/workup",
+            data={
+                "csrf_token": self._get_admin_csrf(client),
+                "action": "add",
+                "label": "Valid Label",
+                "keywords": "normal keyword, <script>xss</script>",
+            },
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+        assert b"only contain" in resp.data.lower() or b"letters" in resp.data.lower()
+        # The workup item must NOT have been persisted
+        assert b"Valid Label" not in resp.data or b"Added workup item" not in resp.data
+
+    def test_keyword_regex_rejects_tab_and_newline(self, client, specialist, app):
+        """Control characters (tab, newline) must be rejected by _LABEL_RE."""
+        self._seed_and_login(client, specialist, app)
+        for bad_keyword in ["tab\there", "new\nline"]:
+            resp = client.post(
+                "/admin/category/hematuria/keywords",
+                data={
+                    "csrf_token": self._get_admin_csrf(client),
+                    "action": "add",
+                    "keyword": bad_keyword,
+                },
+                follow_redirects=True,
+            )
+            assert resp.status_code == 200
+            assert b"only contain" in resp.data.lower() or b"letters" in resp.data.lower(), (
+                f"Expected validation error for keyword {bad_keyword!r}"
+            )
 
 
 # ---------------------------------------------------------------------------

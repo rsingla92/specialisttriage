@@ -10,9 +10,10 @@ from app.models import (
 )
 from app.services.triage_engine import clear_ruleset_cache
 
-# Only alphanumeric ASCII characters, spaces, hyphens, and underscores are
-# allowed in keyword and workup-label inputs (no Unicode, no HTML/script tags).
-_LABEL_RE = re.compile(r"^[a-zA-Z0-9\s\-_]+$")
+# Only alphanumeric ASCII characters, literal spaces, hyphens, and underscores
+# are allowed in keyword and workup-label inputs (no tabs/newlines, no Unicode,
+# no HTML/script tags). fullmatch() is used for unambiguous whole-string checks.
+_LABEL_RE = re.compile(r"^[a-zA-Z0-9 \-_]+$")
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -83,13 +84,21 @@ def update_workup(slug):
         label = request.form.get("label", "").strip()
         keywords_raw = request.form.get("keywords", "").strip()
         if label:
-            if not _LABEL_RE.match(label):
+            if not _LABEL_RE.fullmatch(label):
                 flash("Workup label may only contain letters, numbers, spaces, hyphens, and underscores.", "danger")
+                return redirect(url_for("admin.category_edit", slug=slug))
+            parsed_kws = [k.strip() for k in keywords_raw.split(",") if k.strip()]
+            invalid_kws = [k for k in parsed_kws if not _LABEL_RE.fullmatch(k)]
+            if invalid_kws:
+                flash(
+                    "Detection keywords may only contain letters, numbers, spaces, hyphens, and underscores.",
+                    "danger",
+                )
                 return redirect(url_for("admin.category_edit", slug=slug))
             wi = WorkupItem(category_id=category.id, label=label)
             db.session.add(wi)
             db.session.flush()
-            for kw in [k.strip() for k in keywords_raw.split(",") if k.strip()]:
+            for kw in parsed_kws:
                 db.session.add(WorkupKeyword(
                     workup_item_id=wi.id, keyword=kw.lower(),
                     use_word_boundary=len(kw) <= 3,
@@ -125,7 +134,7 @@ def update_keywords(slug):
     if action == "add":
         keyword = request.form.get("keyword", "").strip().lower()
         if keyword:
-            if not _LABEL_RE.match(keyword):
+            if not _LABEL_RE.fullmatch(keyword):
                 flash("Keywords may only contain letters, numbers, spaces, hyphens, and underscores.", "danger")
                 return redirect(url_for("admin.category_edit", slug=slug))
             existing = CategoryKeyword.query.filter_by(
