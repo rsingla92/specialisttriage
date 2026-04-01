@@ -17,7 +17,6 @@ def health():
         db_ok = True
     except (OperationalError, DatabaseError):
         db.session.rollback()
-        db.session.rollback()
         db_ok = False
     status = "ok" if db_ok else "degraded"
     return jsonify({"status": status, "db": db_ok}), 200 if db_ok else 503
