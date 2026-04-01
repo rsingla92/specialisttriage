@@ -31,10 +31,6 @@ def volume():
     days = request.args.get("days", 30, type=int)
     cutoff = _date_cutoff(days) if days > 0 else None
 
-    q = _base_query()
-    if cutoff:
-        q = q.filter(Referral.received_at >= cutoff)
-
     rows = (
         db.session.query(
             func.date(Referral.received_at),

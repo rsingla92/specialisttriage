@@ -13,6 +13,12 @@ class Config:
         "DATABASE_URL", f"sqlite:///{BASE_DIR / 'specialisttriage.db'}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Connection pool settings prevent connection exhaustion under load.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 10,
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+    }
     WTF_CSRF_ENABLED = True
 
     # OceanMD API settings
@@ -29,6 +35,9 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "test-secret-key"
+    # SQLite in-memory databases use StaticPool, which does not support the
+    # pool_size / pool_recycle / pool_pre_ping options set in the base Config.
+    SQLALCHEMY_ENGINE_OPTIONS = {}
 
 
 class ProductionConfig(Config):
