@@ -1,4 +1,4 @@
-/* SpecialistTriage BC – client-side helpers */
+/* ReferralQ – client-side helpers */
 
 // Auto-dismiss alerts after 6 seconds
 document.addEventListener('DOMContentLoaded', function () {
