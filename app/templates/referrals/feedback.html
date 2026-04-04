@@ -57,28 +57,28 @@
             <h6>Decision</h6>
             <div class="rq-feedback-decisions">
               <label class="rq-feedback-decision-option" for="dec_accepted">
-                <input type="radio" name="decision" id="dec_accepted" value="accepted" required>
+                <input type="radio" name="decision" id="dec_accepted" value="accepted" {% if suggested_decision == 'accepted' %}checked{% endif %} required>
                 <span class="rq-feedback-decision-label">
                   <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--accept"></span>
                   Accept Referral
                 </span>
               </label>
               <label class="rq-feedback-decision-option" for="dec_declined">
-                <input type="radio" name="decision" id="dec_declined" value="declined">
+                <input type="radio" name="decision" id="dec_declined" value="declined" {% if suggested_decision == 'declined' %}checked{% endif %}>
                 <span class="rq-feedback-decision-label">
                   <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--decline"></span>
                   Decline Referral
                 </span>
               </label>
               <label class="rq-feedback-decision-option" for="dec_needs_info">
-                <input type="radio" name="decision" id="dec_needs_info" value="needs_info">
+                <input type="radio" name="decision" id="dec_needs_info" value="needs_info" {% if suggested_decision == 'needs_info' %}checked{% endif %}>
                 <span class="rq-feedback-decision-label">
                   <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--info"></span>
                   Request More Information
                 </span>
               </label>
               <label class="rq-feedback-decision-option" for="dec_redirected">
-                <input type="radio" name="decision" id="dec_redirected" value="redirected">
+                <input type="radio" name="decision" id="dec_redirected" value="redirected" {% if suggested_decision == 'redirected' %}checked{% endif %}>
                 <span class="rq-feedback-decision-label">
                   <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--redirect"></span>
                   Redirect to Another Provider
@@ -91,7 +91,7 @@
           <div class="rq-clinical-section">
             <h6>Message to Referring Physician</h6>
             <textarea class="form-control" id="message" name="message" rows="5"
-              placeholder="Dear Dr. ..., Thank you for your referral. After review..." required></textarea>
+              placeholder="Dear Dr. ..., Thank you for your referral. After review..." required>{{ suggested_message or '' }}</textarea>
             <div class="form-text" style="margin-top: var(--rq-space-sm);">This message will be sent via OceanMD to the referring physician.</div>
           </div>
 
@@ -99,7 +99,7 @@
           <div class="rq-clinical-section" id="workupSection">
             <h6>Recommended Workup <span style="font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--rq-text-muted);">(optional)</span></h6>
             <textarea class="form-control" id="recommended_workup" name="recommended_workup" rows="3"
-              placeholder="e.g. Urinalysis, urine culture, renal ultrasound, voiding diary..."></textarea>
+              placeholder="e.g. Urinalysis, urine culture, renal ultrasound, voiding diary...">{{ suggested_workup or '' }}</textarea>
           </div>
 
           {# Redirect target (conditional) #}
@@ -134,5 +134,12 @@ document.querySelectorAll('input[name="decision"]').forEach(function(radio) {
       this.value === 'redirected' ? '' : 'none';
   });
 });
+// On load: if redirected is pre-checked, show redirect field
+(function() {
+  var checked = document.querySelector('input[name="decision"]:checked');
+  if (checked && checked.value === 'redirected') {
+    document.getElementById('redirectSection').style.display = '';
+  }
+})();
 </script>
 {% endblock %}

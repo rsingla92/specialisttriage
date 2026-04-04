@@ -245,7 +245,9 @@ def send_feedback(referral_id):
 
         if not decision or not message:
             flash("Decision and message are required.", "danger")
-            return render_template("referrals/feedback.html", referral=referral)
+            return render_template("referrals/feedback.html", referral=referral,
+                                   suggested_decision="", suggested_message="",
+                                   suggested_workup="")
 
         if decision not in _ALLOWED_DECISIONS:
             abort(400)
@@ -303,7 +305,57 @@ def send_feedback(referral_id):
             flash("Feedback saved for referring physician.", "success")
         return redirect(url_for("referrals.detail", referral_id=referral_id))
 
-    return render_template("referrals/feedback.html", referral=referral)
+    # --- Auto-populate suggested values ---
+    # Decision
+    suggested_decision = request.args.get("decision", "")
+    if suggested_decision not in _ALLOWED_DECISIONS:
+        # Derive from triage data
+        if referral.missing_workup:
+            suggested_decision = "needs_info"
+        elif referral.triage_result:
+            tr = referral.triage_result
+            if tr.appropriateness_score is not None and tr.appropriateness_score < 30:
+                suggested_decision = "declined"
+            elif (
+                tr.completeness_score is not None
+                and tr.appropriateness_score is not None
+                and tr.completeness_score >= 80
+                and tr.appropriateness_score >= 70
+            ):
+                suggested_decision = "accepted"
+            else:
+                suggested_decision = "accepted"
+        else:
+            suggested_decision = "accepted"
+
+    # Message from matching ResponseTemplate
+    tmpl = ResponseTemplate.query.filter_by(
+        category=referral.clinical_category,
+        template_type=suggested_decision,
+        created_by=None,
+    ).first()
+    if tmpl:
+        suggested_message = tmpl.render(
+            patient_name=referral.patient_full_name,
+            specialist_name=current_user.full_name,
+        )
+    else:
+        suggested_message = "Thank you for this referral."
+
+    # Workup from triage missing_information
+    suggested_workup = ""
+    if referral.triage_result and referral.triage_result.missing_information:
+        items = referral.triage_result.missing_information
+        if isinstance(items, list) and items:
+            suggested_workup = "\n".join(f"- {item}" for item in items)
+
+    return render_template(
+        "referrals/feedback.html",
+        referral=referral,
+        suggested_decision=suggested_decision,
+        suggested_message=suggested_message,
+        suggested_workup=suggested_workup,
+    )
 
 
 @referrals_bp.route("/batch", methods=["POST"])
@@ -372,7 +424,19 @@ def batch_action():
                 specialist_name=current_user.full_name,
             )
         else:
-            message = f"Referral for {referral.patient_full_name} has been {action_type}."
+            # Try a matching system ResponseTemplate for this category/action
+            auto_tmpl = ResponseTemplate.query.filter_by(
+                category=referral.clinical_category,
+                template_type=action_type,
+                created_by=None,
+            ).first()
+            if auto_tmpl:
+                message = auto_tmpl.render(
+                    patient_name=referral.patient_full_name,
+                    specialist_name=current_user.full_name,
+                )
+            else:
+                message = f"Referral for {referral.patient_full_name} has been {action_type}."
 
         fb = Feedback(
             referral_id=referral.id,

@@ -21,22 +21,13 @@ def make_shell_context():
 
 @app.cli.command("seed-demo")
 def seed_demo():
-    """Create a demo specialist account for local development only."""
+    """Create demo specialist accounts for local development only."""
     import secrets as _secrets
 
     flask_env = os.environ.get("FLASK_ENV", "default")
     if flask_env == "production":
         print("ERROR: seed-demo must not be run in a production environment.")
         return
-
-    existing = User.query.filter_by(email="demo@example.com").first()
-    if existing:
-        print("Demo user already exists.")
-        return
-
-    # Generate a cryptographically random password (~16 printable chars from URL-safe alphabet).
-    # This avoids shipping a publicly-known fixed credential even in development/staging.
-    password = _secrets.token_urlsafe(12)
 
     # Create or find the demo clinic
     urology = Specialty.query.filter_by(slug="urology").first()
@@ -52,27 +43,40 @@ def seed_demo():
         db.session.flush()
         print(f"Demo clinic created: {clinic.name}")
 
-    user = User(
-        email="demo@example.com",
-        full_name="Dr. Alex Nguyen",
-        specialty="Urology",
-        clinic_name="Lions Gate Hospital – Urology, North Vancouver",
-        role="specialist",
-    )
-    user.set_password(password)
-    db.session.add(user)
-    db.session.flush()
+    doctors = [
+        ("demo@example.com", "Dr. Alex Nguyen", "owner"),
+        ("sarah@example.com", "Dr. Sarah Chen", "admin"),
+        ("michael@example.com", "Dr. Michael Park", "specialist"),
+    ]
 
-    # Link user to clinic as owner
-    membership = ClinicMembership(
-        user_id=user.id, clinic_id=clinic.id, role="owner",
-    )
-    db.session.add(membership)
-    db.session.commit()
-    print(f"Demo user created: {user.email}")
-    print(f"  Clinic: {clinic.name} (role: owner)")
-    print(f"  Temporary password: {password}")
-    print("  (This password is shown only once – save it now.)")
+    for email, full_name, role in doctors:
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            print(f"User {email} already exists. Skipping.")
+            continue
+
+        password = _secrets.token_urlsafe(12)
+
+        user = User(
+            email=email,
+            full_name=full_name,
+            specialty="Urology",
+            clinic_name=clinic.name,
+            role="specialist",
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+
+        membership = ClinicMembership(
+            user_id=user.id, clinic_id=clinic.id, role=role,
+        )
+        db.session.add(membership)
+        db.session.commit()
+        print(f"Demo user created: {user.email}")
+        print(f"  Clinic: {clinic.name} (role: {role})")
+        print(f"  Temporary password: {password}")
+        print("  (This password is shown only once – save it now.)")
 
 
 @app.cli.command("seed-templates")
@@ -155,9 +159,15 @@ def seed_referrals():
         return
 
     existing_count = Referral.query.filter_by(clinic_id=clinic.id).count()
-    if existing_count > 10:
-        print(f"Referrals already seeded ({existing_count} found). Skipping.")
+    if existing_count >= 80:
+        print(f"Referrals already seeded ({existing_count} found). Delete specialisttriage.db and re-run to refresh.")
         return
+
+    # Look up the 3 doctors for assignment
+    doc_nguyen = User.query.filter_by(email="demo@example.com").first()
+    doc_chen = User.query.filter_by(email="sarah@example.com").first()
+    doc_park = User.query.filter_by(email="michael@example.com").first()
+    doctors_pool = [doc_nguyen, doc_chen, doc_park, None]  # None = unassigned
 
     # --- Name / clinic pools ---
     first_names = [
@@ -517,16 +527,21 @@ def seed_referrals():
 
             ocean_id = f"OCN-SEED-{cat_slug[:4].upper()}-{i+1:03d}"
 
+            # Assign to a doctor (or leave unassigned)
+            assigned_doc = random.choices(doctors_pool, weights=[30, 20, 10, 40])[0]
+
             ref = Referral(
                 ocean_referral_id=ocean_id,
                 patient_first_name=fname,
                 patient_last_name=lname,
                 patient_dob=dob,
                 patient_phn=phn,
+                patient_sex=random.choices(['M', 'F', 'Other'], weights=[70, 25, 5])[0],
                 referring_physician_name=ref_doc,
                 referring_clinic=ref_clinic,
                 referring_physician_phone=f"604-555-{random.randint(1000, 9999)}",
                 referring_physician_fax=f"604-555-{random.randint(1000, 9999)}",
+                referring_physician_specialty=random.choices(['Family Medicine', 'Internal Medicine', 'Emergency Medicine'], weights=[75, 15, 10])[0],
                 chief_complaint=complaint,
                 clinical_notes=notes,
                 relevant_history=history,
@@ -543,6 +558,22 @@ def seed_referrals():
                 received_at=received,
                 triaged_at=received + timedelta(seconds=random.randint(5, 30)),
             )
+
+            if assigned_doc:
+                ref.specialist_id = assigned_doc.id
+                ref.assigned_at = ref.received_at + timedelta(hours=random.randint(1, 48))
+
+            # Add mock attachments to ~40% of referrals
+            if random.random() < 0.4:
+                cat_files = {
+                    'hematuria': ['CT_urogram.pdf', 'urinalysis_report.pdf', 'cystoscopy_findings.pdf'],
+                    'psa_prostate': ['PSA_lab_results.pdf', 'DRE_notes.pdf'],
+                    'stones': ['CT_abdomen.pdf', 'KUB_xray.pdf'],
+                }
+                pool = cat_files.get(cat_slug, ['lab_results.pdf', 'imaging_report.pdf', 'referral_letter.pdf'])
+                n = random.randint(1, min(3, len(pool)))
+                ref.attachments = [{"filename": f, "type": "application/pdf", "url": "#"} for f in random.sample(pool, n)]
+
             referrals_to_add.append(ref)
             referral_count += 1
 

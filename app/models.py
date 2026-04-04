@@ -277,12 +277,17 @@ class Referral(db.Model):
     patient_last_name = db.Column(db.String(100), nullable=False)
     patient_dob = db.Column(db.Date, nullable=False)
     patient_phn = db.Column(db.String(20))  # BC Personal Health Number
+    patient_sex = db.Column(db.String(10))  # M | F | Other | Unknown
 
     # Referring physician
     referring_physician_name = db.Column(db.String(100), nullable=False)
     referring_clinic = db.Column(db.String(200))
     referring_physician_phone = db.Column(db.String(20))
     referring_physician_fax = db.Column(db.String(20))
+    referring_physician_specialty = db.Column(db.String(100))  # e.g., Family Medicine
+
+    # Attachments (list of {filename, url, type} dicts)
+    attachments = db.Column(db.JSON, default=list)
 
     # Referral content
     chief_complaint = db.Column(db.Text, nullable=False)

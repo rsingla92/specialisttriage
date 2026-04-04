@@ -964,8 +964,9 @@ a:hover { color: var(--rq-primary-dark); }
   line-height: 1.6;
 }
 
-/* Data row */
-.rq-data-row {
+/* Data row (referral detail page only, not dashboard table) */
+.card .rq-data-row,
+.rq-feedback-sent .rq-data-row {
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: var(--rq-space-sm);
@@ -973,7 +974,8 @@ a:hover { color: var(--rq-primary-dark); }
   border-bottom: 1px solid var(--rq-divider);
   font-size: 14px;
 }
-.rq-data-row:last-child {
+.card .rq-data-row:last-child,
+.rq-feedback-sent .rq-data-row:last-child {
   border-bottom: none;
 }
 .rq-data-label {
@@ -2594,5 +2596,136 @@ a:hover { color: var(--rq-primary-dark); }
   .rq-settings-readonly-group {
     flex-direction: column;
     gap: var(--rq-space-md);
+  }
+}
+
+/* ANALYTICS LAYOUT POLISH */
+.rq-analytics-chart-body {
+  height: 300px;
+  padding: var(--rq-space-md);
+}
+.rq-analytics-chart-grid {
+  gap: var(--rq-space-md);
+  margin-bottom: var(--rq-space-md);
+}
+.rq-analytics-chart-header {
+  padding: var(--rq-space-sm) var(--rq-space-md);
+}
+.rq-stat-strip {
+  margin-bottom: var(--rq-space-md);
+}
+.rq-analytics-td--muted {
+  font-size: 12px;
+  color: var(--rq-text-muted);
+}
+
+
+/* ============================================================
+   INLINE REVIEW + TABLE UX
+   ============================================================ */
+
+.rq-expand-row {
+  background: var(--rq-surface);
+  border-top: 2px solid var(--rq-divider);
+}
+
+.rq-expand-row > td {
+  padding: var(--rq-space-lg) !important;
+}
+
+.rq-expand-content {
+  display: flex;
+  gap: var(--rq-space-lg);
+}
+
+.rq-expand-left {
+  flex: 0 0 58%;
+  min-width: 0;
+}
+
+.rq-expand-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.rq-expand-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--rq-space-sm);
+  padding-top: var(--rq-space-md);
+  border-top: 1px solid var(--rq-divider);
+  margin-top: var(--rq-space-md);
+}
+
+.rq-checkbox-lg .form-check-input {
+  width: 18px;
+  height: 18px;
+}
+
+.rq-sort-header {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--rq-text);
+  font-weight: 600;
+}
+
+.rq-sort-header:hover {
+  color: var(--rq-primary);
+}
+
+.rq-sort-arrow {
+  font-size: 10px;
+  color: var(--rq-text-muted);
+  line-height: 1;
+}
+
+/* Toast notifications */
+#rqToastContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rq-space-sm);
+}
+
+.rq-toast {
+  background: var(--rq-text);
+  color: #fff;
+  padding: var(--rq-space-sm) var(--rq-space-md);
+  border-radius: var(--rq-radius-sm);
+  font-size: 13px;
+  font-family: var(--rq-font);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  transition: opacity 0.4s ease-out;
+}
+
+.rq-toast--error {
+  background: var(--rq-error);
+}
+
+/* Data row hover for clickable feel */
+.rq-data-row:hover {
+  background: var(--rq-primary-06);
+}
+
+@media (max-width: 768px) {
+  .rq-expand-content {
+    flex-direction: column;
+    gap: var(--rq-space-md);
+  }
+
+  .rq-expand-left {
+    flex: none;
+  }
+
+  .rq-expand-right {
+    flex: none;
   }
 }

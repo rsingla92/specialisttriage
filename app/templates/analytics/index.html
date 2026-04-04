@@ -103,12 +103,14 @@
       <thead>
         <tr>
           <th class="rq-analytics-th">Physician</th>
+          <th class="rq-analytics-th">Clinic</th>
+          <th class="rq-analytics-th">Specialty</th>
           <th class="rq-analytics-th">Volume</th>
           <th class="rq-analytics-th">Avg Completeness</th>
         </tr>
       </thead>
       <tbody id="physTable">
-        <tr><td colspan="3" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">Loading...</td></tr>
+        <tr><td colspan="5" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">Loading...</td></tr>
       </tbody>
     </table>
   </div>
@@ -193,7 +195,7 @@ async function loadAll() {
       datasets: [{label: 'Referrals', data: volume.data.map(d => d.count),
         borderColor: '#1B6B93', backgroundColor: 'rgba(27, 107, 147, 0.08)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#1B6B93'}]
     },
-    options: {plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
+    options: {maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
   });
 
   // Category chart
@@ -205,7 +207,7 @@ async function loadAll() {
       datasets: [{data: categories.data.map(d => d.count),
         backgroundColor: categories.data.map(d => catColors[d.category] || '#bdbdbd'), borderWidth: 1, borderColor: '#fff'}]
     },
-    options: {plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
+    options: {maintainAspectRatio: false, plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
   });
 
   // Completeness trend
@@ -217,7 +219,7 @@ async function loadAll() {
       datasets: [{label: 'Avg Completeness %', data: completeness.data.map(d => d.avg),
         borderColor: '#00796B', backgroundColor: 'rgba(0, 121, 107, 0.08)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#00796B'}]
     },
-    options: {plugins: {legend: {display: false}}, scales: {y: {min: 0, max: 100, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
+    options: {maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {y: {min: 0, max: 100, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
   });
 
   // Outcome chart
@@ -229,17 +231,19 @@ async function loadAll() {
       datasets: [{data: outcomes.data.map(d => d.count),
         backgroundColor: outcomes.data.map(d => outcomeColors[d.status] || '#bdbdbd'), borderWidth: 1, borderColor: '#fff'}]
     },
-    options: {plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
+    options: {maintainAspectRatio: false, plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
   });
 
   // Physicians table
   const tbody = document.getElementById('physTable');
   if (physicians.data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">No data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">No data</td></tr>';
   } else {
     tbody.innerHTML = physicians.data.map(p => `
       <tr>
         <td class="rq-analytics-td">${p.name}</td>
+        <td class="rq-analytics-td rq-analytics-td--muted">${p.clinic || '—'}</td>
+        <td class="rq-analytics-td rq-analytics-td--muted">${p.specialty || '—'}</td>
         <td class="rq-analytics-td rq-tabular">${p.volume}</td>
         <td class="rq-analytics-td rq-tabular">${p.avg_completeness !== null ? p.avg_completeness + '%' : '—'}</td>
       </tr>

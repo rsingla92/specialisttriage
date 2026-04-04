@@ -64,13 +64,39 @@
   {% for slug, label, count in categories %}
   <li class="nav-item">
     <a class="nav-link {% if current_category == slug or (not current_category and not slug) %}active{% endif %}"
-       href="{{ url_for('dashboard.index', category=slug) if slug else url_for('dashboard.index') }}">
+       href="{{ url_for('dashboard.index', category=slug, tab=tab, sort=current_sort, dir=current_dir) if slug else url_for('dashboard.index', tab=tab, sort=current_sort, dir=current_dir) }}">
       {{ label }}
       {% if count %}<span class="badge bg-secondary ms-1">{{ count }}</span>{% endif %}
     </a>
   </li>
   {% endfor %}
 </ul>
+
+{# Sort helpers #}
+{% macro sort_link(col_name, label) %}
+  {% set next_dir = 'asc' if (current_sort == col_name and current_dir == 'desc') else 'desc' %}
+  <a href="{{ url_for('dashboard.index', sort=col_name, dir=next_dir, category=current_category, tab=tab, page=1) }}"
+     class="rq-sort-header text-decoration-none">
+    {{ label }}
+    {% if current_sort == col_name %}
+      <span class="rq-sort-arrow">{{ '&#9650;' if current_dir == 'asc' else '&#9660;' }}</span>
+    {% else %}
+      <span class="rq-sort-arrow">&#9660;</span>
+    {% endif %}
+  </a>
+{% endmacro %}
+
+{# Category color/label maps #}
+{% set cat_colors = {
+  'hematuria': '#c2185b', 'psa_prostate': '#00796b', 'stones': '#f57f17',
+  'incontinence': '#303f9f', 'uti_recurrent': '#7b1fa2',
+  'erectile_dysfunction': '#616161', 'other': '#9e9e9e'
+} %}
+{% set cat_labels = {
+  'hematuria': 'Hematuria', 'psa_prostate': 'PSA/Prostate', 'stones': 'Stones',
+  'incontinence': 'Incontinence', 'uti_recurrent': 'UTI',
+  'erectile_dysfunction': 'ED', 'other': 'Other'
+} %}
 
 {# Referral table #}
 {% if referrals %}
@@ -79,20 +105,22 @@
     <table class="rq-table" id="referralTable">
       <thead>
         <tr>
-          <th style="width:40px; padding-left: 16px;">
+          <th class="rq-checkbox-lg" style="width:40px; padding-left: 16px;">
             <input type="checkbox" id="selectAll" class="form-check-input">
           </th>
           <th>Patient / Referring MD</th>
           <th>Category</th>
-          <th>Urgency</th>
-          <th>Completeness</th>
+          <th>{{ sort_link('urgency', 'Urgency') }}</th>
+          <th>{{ sort_link('completeness', 'Completeness') }}</th>
+          <th>Assigned To</th>
           <th style="width: 100px;"></th>
         </tr>
       </thead>
       <tbody>
         {% for r in referrals %}
-        <tr data-id="{{ r.id }}" data-category="{{ r.clinical_category or 'other' }}">
-          <td style="padding-left: 16px;">
+        {# Main data row #}
+        <tr data-id="{{ r.id }}" data-category="{{ r.clinical_category or 'other' }}" class="rq-data-row">
+          <td class="rq-checkbox-lg" style="padding-left: 16px;">
             {% if r.feedback %}
               <span class="badge" style="background: var(--rq-success); color: #fff; font-size: 10px;">Done</span>
             {% else %}
@@ -101,7 +129,7 @@
           </td>
           <td>
             <div class="rq-patient-name">{{ r.patient_full_name }}
-              <span class="rq-patient-meta ms-1">Age {{ r.patient_age }}</span>
+              <span class="rq-patient-meta ms-1">Age {{ r.patient_age }}{% if r.patient_sex %} {{ r.patient_sex }}{% endif %}</span>
             </div>
             <div class="rq-patient-meta">
               {{ r.referring_physician_name }}
@@ -113,16 +141,6 @@
           </td>
           <td>
             {% set cat = r.clinical_category or 'other' %}
-            {% set cat_colors = {
-              'hematuria': '#c2185b', 'psa_prostate': '#00796b', 'stones': '#f57f17',
-              'incontinence': '#303f9f', 'uti_recurrent': '#7b1fa2',
-              'erectile_dysfunction': '#616161', 'other': '#9e9e9e'
-            } %}
-            {% set cat_labels = {
-              'hematuria': 'Hematuria', 'psa_prostate': 'PSA/Prostate', 'stones': 'Stones',
-              'incontinence': 'Incontinence', 'uti_recurrent': 'UTI',
-              'erectile_dysfunction': 'ED', 'other': 'Other'
-            } %}
             <span class="rq-cat-badge" style="background:{{ cat_colors.get(cat, '#9e9e9e') }}18; color:{{ cat_colors.get(cat, '#9e9e9e') }}; border:1px solid {{ cat_colors.get(cat, '#9e9e9e') }}35;">
               {{ cat_labels.get(cat, cat) }}
             </span>
@@ -160,6 +178,13 @@
             {% endif %}
           </td>
           <td>
+            {% if r.specialist %}
+              <span style="font-size: 13px;">{{ r.specialist.full_name }}</span>
+            {% else %}
+              <span class="text-muted" style="font-size: 12px;">Unassigned</span>
+            {% endif %}
+          </td>
+          <td>
             {% if r.missing_workup and r.missing_workup|length > 0 and not r.feedback %}
               <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-warning">
                 Request Info
@@ -175,6 +200,126 @@
             {% endif %}
           </td>
         </tr>
+
+        {# Expandable inline review row #}
+        <tr class="rq-expand-row d-none" data-expand-for="{{ r.id }}">
+          <td colspan="7" style="padding: 0;">
+            <div class="rq-expand-content">
+              {# Left column: patient + clinical details #}
+              <div class="rq-expand-left">
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-sm);">Patient Details</h6>
+                <div style="font-size: 13px; color: var(--rq-text-secondary); margin-bottom: var(--rq-space-md);">
+                  <strong>{{ r.patient_full_name }}</strong> &mdash;
+                  Age {{ r.patient_age }}{% if r.patient_sex %}, {{ r.patient_sex }}{% endif %}
+                  {% if r.patient_phn %}<br>PHN: {{ r.patient_phn }}{% endif %}
+                </div>
+
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs);">Referring Physician</h6>
+                <div style="font-size: 13px; color: var(--rq-text-secondary); margin-bottom: var(--rq-space-md);">
+                  {{ r.referring_physician_name }}
+                  {% if r.referring_physician_specialty %}<span class="text-muted">({{ r.referring_physician_specialty }})</span>{% endif %}
+                  {% if r.referring_clinic %}<br>{{ r.referring_clinic }}{% endif %}
+                  {% if r.referring_physician_phone %}<br>Ph: {{ r.referring_physician_phone }}{% endif %}
+                  {% if r.referring_physician_fax %} | Fax: {{ r.referring_physician_fax }}{% endif %}
+                </div>
+
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs);">Chief Complaint</h6>
+                <p style="font-size: 13px; color: var(--rq-text-secondary); margin-bottom: var(--rq-space-md);">{{ r.chief_complaint }}</p>
+
+                {% if r.clinical_notes %}
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs);">Clinical Notes</h6>
+                <p style="font-size: 13px; color: var(--rq-text-secondary); margin-bottom: var(--rq-space-md); white-space: pre-line;">{{ r.clinical_notes }}</p>
+                {% endif %}
+
+                {% if r.relevant_investigations %}
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs);">Investigations</h6>
+                <p style="font-size: 13px; color: var(--rq-text-secondary); margin-bottom: var(--rq-space-md);">{{ r.relevant_investigations }}</p>
+                {% endif %}
+              </div>
+
+              {# Right column: triage scores, missing workup, attachments #}
+              <div class="rq-expand-right">
+                {% if r.triage_result %}
+                {% set tr = r.triage_result %}
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-sm);">Triage Scores</h6>
+                <div style="margin-bottom: var(--rq-space-md);">
+                  <div style="font-size: 12px; color: var(--rq-text-muted); margin-bottom: 4px;">Appropriateness</div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rq-completeness-bar" style="flex: 1; height: 6px;">
+                      <div class="rq-completeness-fill" style="width: {{ tr.appropriateness_score }}%; background: var(--rq-primary);"></div>
+                    </div>
+                    <span style="font-size: 12px; font-weight: 600; min-width: 32px;">{{ tr.appropriateness_score }}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--rq-text-muted); margin-bottom: 4px; margin-top: 8px;">Completeness</div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rq-completeness-bar" style="flex: 1; height: 6px;">
+                      <div class="rq-completeness-fill" style="width: {{ tr.completeness_score }}%; background: {% if tr.completeness_score >= 80 %}var(--rq-success){% elif tr.completeness_score >= 50 %}var(--rq-warning){% else %}var(--rq-error){% endif %};"></div>
+                    </div>
+                    <span style="font-size: 12px; font-weight: 600; min-width: 32px;">{{ tr.completeness_score }}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--rq-text-muted); margin-bottom: 4px; margin-top: 8px;">Urgency</div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rq-completeness-bar" style="flex: 1; height: 6px;">
+                      <div class="rq-completeness-fill" style="width: {{ tr.urgency_score }}%; background: {% if tr.urgency_score > 70 %}var(--rq-error){% elif tr.urgency_score > 40 %}var(--rq-warning){% else %}var(--rq-primary){% endif %};"></div>
+                    </div>
+                    <span style="font-size: 12px; font-weight: 600; min-width: 32px;">{{ tr.urgency_score }}%</span>
+                  </div>
+                </div>
+
+                {% if tr.flags %}
+                <div style="margin-bottom: var(--rq-space-md);">
+                  {% for flag in tr.flags %}
+                  <div style="font-size: 12px; color: var(--rq-warning); margin-bottom: 2px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ flag }}</div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+
+                {# Missing workup #}
+                {% if r.missing_workup and r.missing_workup|length > 0 %}
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs); color: var(--rq-warning);">Missing Workup</h6>
+                <ul style="font-size: 12px; padding-left: 16px; margin-bottom: var(--rq-space-md); color: var(--rq-text-secondary);">
+                  {% for item in r.missing_workup %}
+                  <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+
+                {# Attachments #}
+                {% if r.attachments and r.attachments|length > 0 %}
+                <h6 style="font-weight: 600; margin-bottom: var(--rq-space-xs);">Attachments</h6>
+                <ul style="font-size: 12px; padding-left: 16px; margin-bottom: var(--rq-space-md); color: var(--rq-text-secondary);">
+                  {% for att in r.attachments %}
+                  <li>
+                    {% if att.url %}
+                      <a href="{{ att.url }}" target="_blank" rel="noopener">{{ att.filename or 'Attachment' }}</a>
+                    {% else %}
+                      {{ att.filename or 'Attachment' }}
+                    {% endif %}
+                    {% if att.type %}<span class="text-muted">({{ att.type }})</span>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+              </div>
+            </div>
+
+            {# Action buttons #}
+            {% if not r.feedback %}
+            <div class="rq-expand-actions">
+              <button class="btn btn-sm btn-success rq-inline-action" data-action="accepted" data-id="{{ r.id }}">Accept</button>
+              <button class="btn btn-sm btn-warning rq-inline-action" data-action="needs_info" data-id="{{ r.id }}">Request Info</button>
+              <button class="btn btn-sm btn-outline-secondary rq-inline-action" data-action="declined" data-id="{{ r.id }}" style="color: var(--rq-error); border-color: var(--rq-error);">Decline</button>
+              <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-outline-secondary ms-auto">Full Details</a>
+            </div>
+            {% else %}
+            <div class="rq-expand-actions">
+              <span class="badge" style="background: var(--rq-success); color: #fff;">{{ r.feedback.decision|title }}</span>
+              <a href="{{ url_for('referrals.detail', referral_id=r.id) }}" class="btn btn-sm btn-outline-secondary ms-auto">Full Details</a>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -187,13 +332,13 @@
   <ul class="pagination justify-content-center">
     {% if pagination.has_prev %}
     <li class="page-item">
-      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.prev_num, category=current_category) }}">Previous</a>
+      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.prev_num, category=current_category, tab=tab, sort=current_sort, dir=current_dir) }}">Previous</a>
     </li>
     {% endif %}
     {% for p in pagination.iter_pages() %}
       {% if p %}
         <li class="page-item {% if p == pagination.page %}active{% endif %}">
-          <a class="page-link" href="{{ url_for('dashboard.index', page=p, category=current_category) }}">{{ p }}</a>
+          <a class="page-link" href="{{ url_for('dashboard.index', page=p, category=current_category, tab=tab, sort=current_sort, dir=current_dir) }}">{{ p }}</a>
         </li>
       {% else %}
         <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -201,7 +346,7 @@
     {% endfor %}
     {% if pagination.has_next %}
     <li class="page-item">
-      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.next_num, category=current_category) }}">Next</a>
+      <a class="page-link" href="{{ url_for('dashboard.index', page=pagination.next_num, category=current_category, tab=tab, sort=current_sort, dir=current_dir) }}">Next</a>
     </li>
     {% endif %}
   </ul>
@@ -233,19 +378,6 @@
   </div>
 </div>
 
-{# Quick review offcanvas #}
-<div class="offcanvas offcanvas-end" tabindex="-1" id="reviewPanel" style="width:480px;">
-  <div class="offcanvas-header border-bottom">
-    <h5 class="offcanvas-title fw-bold">Quick Review</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-  </div>
-  <div class="offcanvas-body p-0" id="reviewPanelBody">
-    <div class="text-center py-5 text-muted">
-      <div class="spinner-border spinner-border-sm me-2"></div>Loading...
-    </div>
-  </div>
-</div>
-
 {# Batch confirmation modal #}
 <div class="modal fade" id="batchModal" tabindex="-1">
   <div class="modal-dialog">
@@ -265,6 +397,10 @@
     </div>
   </div>
 </div>
+
+{# Toast container #}
+<div id="rqToastContainer"></div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -272,7 +408,18 @@
 const csrfToken = document.querySelector('meta[name=csrf-token]')?.content ||
   document.querySelector('input[name=csrf_token]')?.value || '';
 
-// Select all / individual checkbox logic
+// --- Toast helper ---
+function showToast(msg, type) {
+  const container = document.getElementById('rqToastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'rq-toast' + (type === 'error' ? ' rq-toast--error' : '');
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
+
+// --- Select all / individual checkbox logic ---
 const selectAll = document.getElementById('selectAll');
 const batchBar = document.getElementById('batchBar');
 
@@ -298,7 +445,7 @@ document.querySelectorAll('.row-check').forEach(cb => {
   cb.addEventListener('change', updateBatchBar);
 });
 
-// Batch action flow
+// --- Batch action flow ---
 let pendingAction = '';
 
 function doBatch(action) {
@@ -332,7 +479,7 @@ document.getElementById('batchConfirmBtn')?.addEventListener('click', async func
     const data = await resp.json();
     bootstrap.Modal.getInstance(document.getElementById('batchModal')).hide();
     (data.results || []).forEach(r => {
-      const row = document.querySelector(`tr[data-id="${r.id}"]`);
+      const row = document.querySelector(`tr.rq-data-row[data-id="${r.id}"]`);
       if (!row) return;
       const cb = row.querySelector('.row-check');
       if (r.status === 'sent' || r.status === 'saved') {
@@ -348,28 +495,84 @@ document.getElementById('batchConfirmBtn')?.addEventListener('click', async func
       }
     });
     updateBatchBar();
+    showToast('Batch action completed', 'success');
   } catch (e) {
-    alert('Error: ' + e.message);
+    showToast('Error: ' + e.message, 'error');
   } finally {
     this.disabled = false;
     this.textContent = 'Send All';
   }
 });
 
-// Quick review panel - click row to open offcanvas
-document.querySelectorAll('#referralTable tbody tr').forEach(row => {
+// --- Expand row on click (collapse previous) ---
+let currentExpandId = null;
+
+document.querySelectorAll('#referralTable tbody tr.rq-data-row').forEach(row => {
   row.style.cursor = 'pointer';
   row.addEventListener('click', function(e) {
     if (e.target.closest('input, button, a, .form-check-input, form')) return;
     const id = this.dataset.id;
     if (!id) return;
-    const panel = document.getElementById('reviewPanelBody');
-    panel.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
-    new bootstrap.Offcanvas(document.getElementById('reviewPanel')).show();
-    fetch('/referrals/' + id + '/panel')
-      .then(r => r.text())
-      .then(html => { panel.innerHTML = html; })
-      .catch(() => { panel.innerHTML = '<div class="text-center py-5 text-danger">Failed to load referral.</div>'; });
+
+    const expandRow = document.querySelector(`tr[data-expand-for="${id}"]`);
+    if (!expandRow) return;
+
+    // Collapse previous if different
+    if (currentExpandId && currentExpandId !== id) {
+      const prev = document.querySelector(`tr[data-expand-for="${currentExpandId}"]`);
+      if (prev) prev.classList.add('d-none');
+    }
+
+    // Toggle current
+    expandRow.classList.toggle('d-none');
+    currentExpandId = expandRow.classList.contains('d-none') ? null : id;
+  });
+});
+
+// --- Inline action buttons (AJAX) ---
+document.querySelectorAll('.rq-inline-action').forEach(btn => {
+  btn.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    const action = this.dataset.action;
+    const id = parseInt(this.dataset.id);
+    this.disabled = true;
+    this.textContent = 'Sending...';
+
+    try {
+      const resp = await fetch('/referrals/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify({referral_ids: [id], action_type: action})
+      });
+      const data = await resp.json();
+      const result = (data.results || [])[0];
+
+      if (result && (result.status === 'sent' || result.status === 'saved')) {
+        // Collapse expand row
+        const expandRow = document.querySelector(`tr[data-expand-for="${id}"]`);
+        if (expandRow) expandRow.classList.add('d-none');
+        currentExpandId = null;
+
+        // Update main row status badge
+        const mainRow = document.querySelector(`tr.rq-data-row[data-id="${id}"]`);
+        if (mainRow) {
+          const cb = mainRow.querySelector('.row-check');
+          if (cb) cb.replaceWith(Object.assign(document.createElement('span'), {
+            className: 'badge', textContent: 'Done', title: action,
+            style: 'background: var(--rq-success); color: #fff; font-size: 10px;'
+          }));
+        }
+        showToast('Referral ' + action.replace('_', ' '), 'success');
+      } else {
+        showToast('Action failed', 'error');
+        this.disabled = false;
+        this.textContent = action === 'accepted' ? 'Accept' : (action === 'needs_info' ? 'Request Info' : 'Decline');
+      }
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+      this.disabled = false;
+      this.textContent = action === 'accepted' ? 'Accept' : (action === 'needs_info' ? 'Request Info' : 'Decline');
+    }
   });
 });
 </script>

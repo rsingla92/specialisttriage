@@ -163,6 +163,8 @@ def referring_physicians():
             Referral.referring_physician_name,
             func.count(Referral.id).label("volume"),
             func.avg(TriageResult.completeness_score).label("avg_completeness"),
+            func.max(Referral.referring_clinic).label('clinic'),
+            func.max(Referral.referring_physician_specialty).label('specialty'),
         )
         .outerjoin(TriageResult, TriageResult.referral_id == Referral.id)
         .filter(Referral.specialist_id == current_user.id)
@@ -176,8 +178,14 @@ def referring_physicians():
         .all()
     )
     return jsonify({"data": [
-        {"name": name, "volume": vol, "avg_completeness": round(ac, 1) if ac else None}
-        for name, vol, ac in rows
+        {
+            "name": row.referring_physician_name,
+            "volume": row.volume,
+            "avg_completeness": round(row.avg_completeness, 1) if row.avg_completeness else None,
+            "clinic": row.clinic or '',
+            "specialty": row.specialty or '',
+        }
+        for row in rows
     ]})
 
 

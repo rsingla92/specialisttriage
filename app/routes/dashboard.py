@@ -3,8 +3,9 @@ from datetime import datetime, timezone, timedelta
 from flask import Blueprint, render_template, request
 from flask_login import login_required, current_user
 from sqlalchemy import case, func
+from sqlalchemy.orm import joinedload
 from app import db
-from app.models import Referral
+from app.models import Referral, TriageResult
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -83,11 +84,32 @@ def index():
     )
     category_counts = {cat: count for cat, count in cat_rows}
 
+    # Sorting
+    sort = request.args.get("sort", "")
+    sort_dir = request.args.get("dir", "desc")
+    if sort_dir not in ("asc", "desc"):
+        sort_dir = "desc"
+
+    if sort == "urgency":
+        order_expr = _PRIORITY_SORT.asc() if sort_dir == "asc" else _PRIORITY_SORT.desc()
+        base_q = base_q.order_by(order_expr, Referral.received_at.desc())
+    elif sort == "completeness":
+        base_q = base_q.outerjoin(TriageResult)
+        col = TriageResult.completeness_score
+        order_expr = col.asc().nullslast() if sort_dir == "asc" else col.desc().nullslast()
+        base_q = base_q.order_by(order_expr, Referral.received_at.desc())
+    else:
+        base_q = base_q.order_by(_PRIORITY_SORT, Referral.received_at.desc())
+
+    # Eager-load specialist to avoid N+1
+    base_q = base_q.options(
+        joinedload(Referral.specialist),
+        joinedload(Referral.triage_result),
+    )
+
     # Pagination
     page = request.args.get("page", 1, type=int)
-    pagination = base_q.order_by(
-        _PRIORITY_SORT, Referral.received_at.desc()
-    ).paginate(page=page, per_page=_ITEMS_PER_PAGE, error_out=False)
+    pagination = base_q.paginate(page=page, per_page=_ITEMS_PER_PAGE, error_out=False)
 
     return render_template(
         "dashboard/index.html",
@@ -96,6 +118,8 @@ def index():
         stats=stats,
         category_counts=category_counts,
         current_category=category,
+        current_sort=sort,
+        current_dir=sort_dir,
         tab=tab,
         has_clinics=has_clinics,
         pool_count=pool_count,
