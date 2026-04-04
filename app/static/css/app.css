@@ -2663,6 +2663,13 @@ a:hover { color: var(--rq-primary-dark); }
   height: 18px;
 }
 
+@media (max-width: 576px) {
+  .rq-checkbox-lg {
+    padding-left: var(--rq-space-md);
+    padding-right: var(--rq-space-sm);
+  }
+}
+
 .rq-sort-header {
   cursor: pointer;
   user-select: none;
