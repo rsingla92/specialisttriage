@@ -539,7 +539,7 @@ a:hover { color: var(--rq-primary-dark); }
 }
 
 .rq-hero h1 {
-  font-size: 48px;
+  font-size: 40px;
   font-weight: 700;
   letter-spacing: -1px;
   line-height: 1.1;
@@ -2591,6 +2591,10 @@ a:hover { color: var(--rq-primary-dark); }
     white-space: nowrap;
     font-size: 13px;
     padding: var(--rq-space-xs) var(--rq-space-sm);
+  }
+
+  .rq-settings-nav-item i {
+    display: none;
   }
 
   .rq-settings-readonly-group {
