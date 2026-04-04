@@ -10,7 +10,7 @@ In QA mode, flag any code that doesn't match DESIGN.md.
 - Run: `python -m pytest -v`
 - Test directory: `tests/`
 - Framework: pytest + pytest-flask
-- Current count: 105 tests
+- Current count: 146 tests
 
 ## Development
 - Python 3.11, Flask 3.1, SQLAlchemy 2.0

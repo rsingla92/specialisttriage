@@ -18,7 +18,7 @@ Multi-specialty referral triage SaaS that helps specialist clinics process refer
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.12, Flask 3.x |
+| Backend | Python 3.11, Flask 3.1 |
 | Database | SQLite (dev) / PostgreSQL-compatible via SQLAlchemy |
 | Auth | Flask-Login (session-based) |
 | Migrations | Flask-Migrate / Alembic |
@@ -74,8 +74,9 @@ app/
 └── static/                # CSS (design system) + JS
 tests/
 ├── test_triage_engine.py  # 45 tests: classification, workup, scoring, LLM, ruleset
-├── test_ocean_md.py       # 14 tests: mock mode, live API parsing
-└── test_routes.py         # 66 tests: auth, dashboard, batch, clinic, analytics, pathways
+├── test_ocean_md.py       # 12 tests: mock mode, live API parsing
+├── test_routes.py         # 68 tests: auth, dashboard, batch, clinic, analytics, pathways
+└── test_fixes.py          # 21 tests: regression tests for QA-discovered bugs
 ```
 
 ## Running Tests
@@ -84,7 +85,7 @@ tests/
 python -m pytest -v
 ```
 
-125 tests covering triage engine, OceanMD service, all routes, clinic management, analytics, and LLM classification.
+146 tests covering triage engine, OceanMD service, all routes, clinic management, analytics, LLM classification, and QA regression tests.
 
 ## Configuration
 
@@ -96,7 +97,7 @@ Copy `.env.example` to `.env` and set:
 | `DATABASE_URL` | SQLAlchemy DB URL (default: SQLite) |
 | `OCEAN_MD_API_KEY` | OceanMD API key (empty = mock mode) |
 | `OCEAN_MD_BASE_URL` | OceanMD API base URL |
-| `ANTHROPIC_API_KEY` | Anthropic API key (optional, for LLM classification) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (optional, for LLM classification fallback) |
 
 ## License
 
