@@ -78,7 +78,10 @@ Rules:
             messages=[{"role": "user", "content": prompt}],
         )
 
-        text = response.content[0].text.strip()
+        content_block = response.content[0]
+        if not hasattr(content_block, "text"):
+            return None
+        text = content_block.text.strip()  # type: ignore[union-attr]
         # Parse JSON response
         result = json.loads(text)
 

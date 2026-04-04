@@ -38,11 +38,13 @@ def _referral_to_dict(r: Referral) -> dict:
         "missing_workup": r.missing_workup or [],
         "received_at": r.received_at.isoformat() if r.received_at else None,
         "triaged_at": r.triaged_at.isoformat() if r.triaged_at else None,
-        "triage": _triage_to_dict(r.triage_result) if r.triage_result else None,
+        "triage": _triage_to_dict(r.triage_result),  # type: ignore[arg-type]
     }
 
 
-def _triage_to_dict(t: TriageResult) -> dict:
+def _triage_to_dict(t: TriageResult | None) -> dict | None:
+    if t is None:
+        return None
     return {
         "appropriateness_score": t.appropriateness_score,
         "completeness_score": t.completeness_score,

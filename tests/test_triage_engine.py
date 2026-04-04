@@ -4,8 +4,11 @@ from app.services.triage_engine import (
 )
 
 
-def make_referral(**kwargs) -> ReferralData:
-    defaults = {
+from typing import Any
+
+
+def make_referral(**kwargs: Any) -> ReferralData:
+    defaults: dict[str, Any] = {
         "chief_complaint": "Routine follow-up",
         "clinical_notes": "",
         "relevant_history": "No significant history",
