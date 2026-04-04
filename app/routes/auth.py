@@ -60,9 +60,11 @@ def login():
     return render_template("auth/login.html")
 
 
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.route("/logout", methods=["GET", "POST"])
 @login_required
 def logout():
+    if request.method == "GET":
+        return redirect(url_for("auth.login"))
     logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
