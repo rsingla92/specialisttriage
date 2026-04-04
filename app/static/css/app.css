@@ -1579,8 +1579,8 @@ a:hover { color: var(--rq-primary-dark); }
 .rq-analytics-chart-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--rq-space-lg);
-  margin-bottom: var(--rq-space-lg);
+  gap: var(--rq-space-md);
+  margin-bottom: var(--rq-space-md);
 }
 
 @media (max-width: 768px) {
@@ -1597,13 +1597,13 @@ a:hover { color: var(--rq-primary-dark); }
 }
 
 .rq-analytics-chart-header {
-  padding: var(--rq-space-md) var(--rq-space-lg);
+  padding: var(--rq-space-sm) var(--rq-space-md);
   border-bottom: 1px solid var(--rq-divider);
   background: var(--rq-surface);
 }
 
 .rq-analytics-chart-body {
-  padding: var(--rq-space-lg);
+  padding: var(--rq-space-md);
 }
 
 .rq-analytics-table-card {
@@ -1611,7 +1611,7 @@ a:hover { color: var(--rq-primary-dark); }
   border-radius: var(--rq-radius-md);
   background: var(--rq-surface);
   overflow: hidden;
-  margin-bottom: var(--rq-space-lg);
+  margin-bottom: var(--rq-space-md);
 }
 
 .rq-analytics-th {

@@ -33,12 +33,14 @@
             <i class="bi bi-speedometer2 me-1"></i>Dashboard
           </a>
         </li>
+        {% if current_user.role != 'specialist' %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and 'pathways' in request.endpoint %}active{% endif %}"
              href="{{ url_for('pathways.index') }}">
             <i class="bi bi-signpost-split me-1"></i>Pathways
           </a>
         </li>
+        {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint == 'analytics.index' %}active{% endif %}"
              href="{{ url_for('analytics.index') }}">
