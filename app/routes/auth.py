@@ -1,6 +1,5 @@
 """Authentication routes: login, logout, register, signup, onboarding, join."""
 import re
-import secrets
 from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user

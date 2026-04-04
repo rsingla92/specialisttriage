@@ -3,9 +3,7 @@ import os
 from app import create_app, db
 from app.models import (
     User, Referral, TriageResult, Feedback, ResponseTemplate, BatchAction,
-    Specialty, ClinicalCategory, CategoryKeyword, WorkupItem, WorkupKeyword,
-    PriorityKeyword, PathwayGuidance, TriageConfig,
-    Clinic, ClinicMembership,
+    Specialty, ClinicalCategory, Clinic, ClinicMembership,
 )
 
 app = create_app(os.environ.get("FLASK_ENV", "default"))

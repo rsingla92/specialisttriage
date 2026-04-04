@@ -3,7 +3,7 @@ import secrets
 from flask import Blueprint, render_template, request, jsonify, url_for, flash, redirect, abort
 from flask_login import login_required, current_user
 from app import db
-from app.models import Clinic, ClinicMembership, User, CLINIC_ADMIN_ROLES
+from app.models import ClinicMembership
 from functools import wraps
 
 clinic_bp = Blueprint("clinic", __name__)

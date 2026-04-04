@@ -2,7 +2,7 @@
 import json
 import pytest
 from app import create_app, db
-from app.models import User, Referral, ResponseTemplate, Feedback, Clinic, ClinicMembership, Specialty
+from app.models import User, Referral, Feedback, Clinic, ClinicMembership, Specialty
 
 
 @pytest.fixture()

@@ -1,5 +1,5 @@
 """Public FP pre-referral pathway pages. Loads content from DB when available."""
-from flask import Blueprint, render_template, abort
+from flask import Blueprint, render_template
 from app.models import Specialty, ClinicalCategory
 
 pathways_bp = Blueprint("pathways", __name__)

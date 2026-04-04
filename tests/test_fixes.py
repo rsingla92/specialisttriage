@@ -19,9 +19,7 @@ from app.models import (
     Clinic,
     ClinicMembership,
     Referral,
-    ResponseTemplate,
     User,
-    Feedback,
 )
 
 

@@ -1,5 +1,4 @@
 """Tests for the OceanMD service layer."""
-import pytest
 import requests as requests_lib
 from unittest.mock import patch, MagicMock
 from app.services.ocean_md import OceanMDService

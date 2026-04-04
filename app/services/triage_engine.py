@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
 
 # Deferred import to avoid circular dependency at module load time.
 # The DB models are only needed when load_ruleset() actually queries;

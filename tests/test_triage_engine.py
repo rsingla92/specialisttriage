@@ -1,5 +1,4 @@
 """Tests for the triage engine."""
-import pytest
 from app.services.triage_engine import (
     triage_referral, ReferralData, classify_category, detect_missing_workup,
 )
@@ -330,7 +329,7 @@ class TestLLMClassification:
             with patch("app.services.llm_classifier.is_llm_enabled", return_value=True):
                 with patch("app.services.llm_classifier.classify_with_llm", return_value=mock_result):
                     ref = make_referral(chief_complaint="Patient has unusual voiding symptoms")
-                    result = triage_referral(ref)
+                    triage_referral(ref)
         finally:
             os.environ.pop("ANTHROPIC_API_KEY", None)
 
