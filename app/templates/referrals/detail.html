@@ -2,216 +2,249 @@
 {% block title %}Referral – {{ referral.patient_full_name }} – ReferralQ{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-    <li class="breadcrumb-item active">Referral #{{ referral.id }}</li>
-  </ol>
-</nav>
+{# Breadcrumb + ID #}
+<div class="rq-detail-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active">{{ referral.patient_full_name }}</li>
+    </ol>
+  </nav>
+  <span class="rq-detail-id">REF-{{ referral.id }}</span>
+</div>
 
 <div class="row g-4">
 
-  {# ---- Left column: referral details ---- #}
+  {# Left column: referral details #}
   <div class="col-lg-7">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white">
-        <h5 class="mb-0 fw-bold">
-          <i class="bi bi-person-fill text-primary me-2"></i>Patient & Referral
+
+    {# Patient & Referral #}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0 fw-bold" style="font-size: 14px;">
+          <i class="bi bi-person-fill me-2" style="color: var(--rq-primary);"></i>Patient & Referral
+        </h5>
+      </div>
+      <div class="card-body" style="padding: 16px 20px;">
+        <div class="rq-data-row">
+          <div class="rq-data-label">Patient</div>
+          <div class="rq-data-value fw-semibold">{{ referral.patient_full_name }}</div>
+        </div>
+        <div class="rq-data-row">
+          <div class="rq-data-label">Age / DOB</div>
+          <div class="rq-data-value">{{ referral.patient_age }} years &mdash; {{ referral.patient_dob.strftime('%B %d, %Y') }}</div>
+        </div>
+        {% if referral.patient_phn %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">BC PHN</div>
+          <div class="rq-data-value"><code>{{ referral.patient_phn }}</code></div>
+        </div>
+        {% endif %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Referring MD</div>
+          <div class="rq-data-value">
+            {{ referral.referring_physician_name }}
+            {% if referral.referring_clinic %}
+              <div style="font-size: 12px; color: var(--rq-text-muted);">{{ referral.referring_clinic }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if referral.referring_physician_phone %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Phone / Fax</div>
+          <div class="rq-data-value">
+            {{ referral.referring_physician_phone }}
+            {% if referral.referring_physician_fax %} / {{ referral.referring_physician_fax }}{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Specialty</div>
+          <div class="rq-data-value">{{ referral.specialty_requested }}</div>
+        </div>
+        <div class="rq-data-row">
+          <div class="rq-data-label">Received</div>
+          <div class="rq-data-value">{{ referral.received_at.strftime('%B %d, %Y at %H:%M') if referral.received_at else '—' }}</div>
+        </div>
+        {% if referral.ocean_referral_id %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">OceanMD ID</div>
+          <div class="rq-data-value"><code>{{ referral.ocean_referral_id }}</code></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Clinical Information #}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0 fw-bold" style="font-size: 14px;">
+          <i class="bi bi-file-medical-fill me-2" style="color: var(--rq-text-muted);"></i>Clinical Information
         </h5>
       </div>
       <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-sm-4">Patient</dt>
-          <dd class="col-sm-8">{{ referral.patient_full_name }}</dd>
-
-          <dt class="col-sm-4">Age / DOB</dt>
-          <dd class="col-sm-8">{{ referral.patient_age }} years &mdash; {{ referral.patient_dob.strftime('%B %d, %Y') }}</dd>
-
-          {% if referral.patient_phn %}
-          <dt class="col-sm-4">BC PHN</dt>
-          <dd class="col-sm-8">{{ referral.patient_phn }}</dd>
-          {% endif %}
-
-          <dt class="col-sm-4">Referring Physician</dt>
-          <dd class="col-sm-8">
-            {{ referral.referring_physician_name }}
-            {% if referral.referring_clinic %}
-              <div class="text-muted small">{{ referral.referring_clinic }}</div>
-            {% endif %}
-          </dd>
-
-          {% if referral.referring_physician_phone %}
-          <dt class="col-sm-4">Phone / Fax</dt>
-          <dd class="col-sm-8">
-            {{ referral.referring_physician_phone }}
-            {% if referral.referring_physician_fax %}
-              / {{ referral.referring_physician_fax }}
-            {% endif %}
-          </dd>
-          {% endif %}
-
-          <dt class="col-sm-4">Specialty Requested</dt>
-          <dd class="col-sm-8">{{ referral.specialty_requested }}</dd>
-
-          <dt class="col-sm-4">Received</dt>
-          <dd class="col-sm-8">{{ referral.received_at.strftime('%B %d, %Y at %H:%M') if referral.received_at else '—' }}</dd>
-
-          {% if referral.ocean_referral_id %}
-          <dt class="col-sm-4">OceanMD ID</dt>
-          <dd class="col-sm-8"><code>{{ referral.ocean_referral_id }}</code></dd>
-          {% endif %}
-        </dl>
+        <div class="rq-clinical-section">
+          <h6>Chief Complaint</h6>
+          <p>{{ referral.chief_complaint or '—' }}</p>
+        </div>
+        <div class="rq-clinical-section">
+          <h6>Clinical Notes</h6>
+          <p>{{ referral.clinical_notes or '—' }}</p>
+        </div>
+        <div class="rq-clinical-section">
+          <h6>Relevant History</h6>
+          <p>{{ referral.relevant_history or '—' }}</p>
+        </div>
+        <div class="rq-clinical-section">
+          <h6>Current Medications</h6>
+          <p>{{ referral.current_medications or '—' }}</p>
+        </div>
+        <div class="rq-clinical-section">
+          <h6>Allergies</h6>
+          <p>{{ referral.allergies or '—' }}</p>
+        </div>
+        <div class="rq-clinical-section" style="margin-bottom: 0;">
+          <h6>Investigations</h6>
+          <p>{{ referral.relevant_investigations or '—' }}</p>
+        </div>
       </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-file-medical-fill text-secondary me-2"></i>Clinical Information</h5>
-      </div>
-      <div class="card-body">
-        <h6 class="text-uppercase text-muted small fw-bold">Chief Complaint</h6>
-        <p>{{ referral.chief_complaint or '—' }}</p>
-
-        <h6 class="text-uppercase text-muted small fw-bold">Clinical Notes</h6>
-        <p>{{ referral.clinical_notes or '—' }}</p>
-
-        <h6 class="text-uppercase text-muted small fw-bold">Relevant History</h6>
-        <p>{{ referral.relevant_history or '—' }}</p>
-
-        <h6 class="text-uppercase text-muted small fw-bold">Current Medications</h6>
-        <p>{{ referral.current_medications or '—' }}</p>
-
-        <h6 class="text-uppercase text-muted small fw-bold">Allergies</h6>
-        <p>{{ referral.allergies or '—' }}</p>
-
-        <h6 class="text-uppercase text-muted small fw-bold">Investigations</h6>
-        <p>{{ referral.relevant_investigations or '—' }}</p>
-      </div>
-    </div>
-
-    {# ---- Feedback / status ---- #}
+    {# Feedback sent #}
     {% if referral.feedback %}
-    <div class="card shadow-sm border-success mb-4">
-      <div class="card-header bg-success text-white">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-chat-left-dots-fill me-2"></i>Feedback Sent</h5>
+    <div class="rq-feedback-sent mb-4">
+      <div class="rq-feedback-header">
+        <h5><i class="bi bi-chat-left-dots-fill me-2"></i>Feedback Sent</h5>
       </div>
-      <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-sm-3">Decision</dt>
-          <dd class="col-sm-9"><strong>{{ referral.feedback.decision | title }}</strong></dd>
-          <dt class="col-sm-3">Message</dt>
-          <dd class="col-sm-9">{{ referral.feedback.message }}</dd>
-          {% if referral.feedback.recommended_workup %}
-          <dt class="col-sm-3">Recommended Workup</dt>
-          <dd class="col-sm-9">{{ referral.feedback.recommended_workup }}</dd>
-          {% endif %}
-          {% if referral.feedback.redirect_to %}
-          <dt class="col-sm-3">Redirect To</dt>
-          <dd class="col-sm-9">{{ referral.feedback.redirect_to }}</dd>
-          {% endif %}
-          <dt class="col-sm-3">Sent</dt>
-          <dd class="col-sm-9">{{ referral.feedback.sent_at.strftime('%B %d, %Y at %H:%M') }}</dd>
-          <dt class="col-sm-3">Delivery</dt>
-          <dd class="col-sm-9">
+      <div class="card-body" style="padding: 16px 20px;">
+        <div class="rq-data-row">
+          <div class="rq-data-label">Decision</div>
+          <div class="rq-data-value fw-semibold">{{ referral.feedback.decision | title }}</div>
+        </div>
+        <div class="rq-data-row">
+          <div class="rq-data-label">Message</div>
+          <div class="rq-data-value">{{ referral.feedback.message }}</div>
+        </div>
+        {% if referral.feedback.recommended_workup %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Workup</div>
+          <div class="rq-data-value">{{ referral.feedback.recommended_workup }}</div>
+        </div>
+        {% endif %}
+        {% if referral.feedback.redirect_to %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Redirect To</div>
+          <div class="rq-data-value">{{ referral.feedback.redirect_to }}</div>
+        </div>
+        {% endif %}
+        <div class="rq-data-row">
+          <div class="rq-data-label">Sent</div>
+          <div class="rq-data-value">{{ referral.feedback.sent_at.strftime('%B %d, %Y at %H:%M') }}</div>
+        </div>
+        <div class="rq-data-row">
+          <div class="rq-data-label">Delivery</div>
+          <div class="rq-data-value">
             {% if referral.feedback.delivery_status == 'sent' %}
-              <span class="badge bg-success">Delivered via OceanMD</span>
+              <span class="badge" style="background: var(--rq-success); color: #fff;">Delivered via OceanMD</span>
             {% elif referral.feedback.delivery_status == 'failed' %}
-              <span class="badge bg-danger">Delivery failed – fax manually</span>
+              <span class="badge" style="background: var(--rq-error); color: #fff;">Delivery failed – fax manually</span>
             {% elif referral.feedback.delivery_status == 'saved' %}
               <span class="badge bg-secondary">Saved locally (not sent)</span>
             {% else %}
               <span class="badge bg-secondary">Pending</span>
             {% endif %}
-          </dd>
-        </dl>
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}
 
   </div>
 
-  {# ---- Right column: triage panel + actions ---- #}
+  {# Right column: triage + actions #}
   <div class="col-lg-5">
 
+    {# Triage assessment #}
     {% if referral.triage_result %}
     {% set tr = referral.triage_result %}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-robot text-primary me-2"></i>Triage Assessment</h5>
-        <span class="badge bg-secondary small">{{ tr.model_version }}</span>
+    <div class="rq-triage-panel mb-4">
+      <div class="rq-triage-header">
+        <h5><i class="bi bi-robot"></i> Triage Assessment</h5>
+        <span class="rq-model-tag">{{ tr.model_version }}</span>
       </div>
-      <div class="card-body">
+      <div class="rq-triage-body">
 
         {# Priority badge #}
-        <div class="text-center mb-3">
+        <div class="rq-triage-priority-display">
           {% set p = tr.recommended_priority %}
           {% if p == 'urgent' %}
-            <span class="badge bg-danger fs-5 px-3 py-2">🚨 URGENT</span>
+            <span class="rq-triage-priority-badge rq-priority--urgent">Urgent</span>
           {% elif p == 'high' %}
-            <span class="badge bg-warning text-dark fs-5 px-3 py-2">⚠️ HIGH PRIORITY</span>
+            <span class="rq-triage-priority-badge rq-priority--high">High Priority</span>
           {% elif p == 'routine' %}
-            <span class="badge bg-primary fs-5 px-3 py-2">Routine</span>
+            <span class="rq-triage-priority-badge rq-priority--routine">Routine</span>
           {% elif p == 'low' %}
-            <span class="badge bg-secondary fs-5 px-3 py-2">Low Priority</span>
+            <span class="rq-triage-priority-badge rq-priority--low">Low Priority</span>
           {% elif p == 'needs_info' %}
-            <span class="badge bg-info text-dark fs-5 px-3 py-2">Needs More Info</span>
+            <span class="rq-triage-priority-badge rq-priority--needs_info">Needs More Info</span>
           {% elif p == 'inappropriate' %}
-            <span class="badge bg-dark fs-5 px-3 py-2">Inappropriate Referral</span>
+            <span class="rq-triage-priority-badge rq-priority--inappropriate">Inappropriate</span>
           {% endif %}
         </div>
 
         {# Score bars #}
-        <div class="mb-2">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Appropriateness</span><strong>{{ tr.appropriateness_score }}/100</strong>
+        <div class="rq-score">
+          <div class="rq-score-header">
+            <span class="rq-score-name">Appropriateness</span>
+            <span class="rq-score-num">{{ tr.appropriateness_score }}/100</span>
           </div>
-          <div class="progress" style="height:8px">
-            <div class="progress-bar
-              {% if tr.appropriateness_score >= 70 %}bg-success{% elif tr.appropriateness_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-              style="width:{{ tr.appropriateness_score }}%"></div>
-          </div>
-        </div>
-        <div class="mb-2">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Completeness</span><strong>{{ tr.completeness_score }}/100</strong>
-          </div>
-          <div class="progress" style="height:8px">
-            <div class="progress-bar
-              {% if tr.completeness_score >= 70 %}bg-success{% elif tr.completeness_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-              style="width:{{ tr.completeness_score }}%"></div>
+          <div class="progress">
+            <div class="progress-bar {% if tr.appropriateness_score >= 70 %}bg-success{% elif tr.appropriateness_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                 style="width:{{ tr.appropriateness_score }}%"></div>
           </div>
         </div>
-        <div class="mb-3">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Urgency</span><strong>{{ tr.urgency_score }}/100</strong>
+        <div class="rq-score">
+          <div class="rq-score-header">
+            <span class="rq-score-name">Completeness</span>
+            <span class="rq-score-num">{{ tr.completeness_score }}/100</span>
           </div>
-          <div class="progress" style="height:8px">
-            <div class="progress-bar
-              {% if tr.urgency_score >= 70 %}bg-danger{% elif tr.urgency_score >= 40 %}bg-warning{% else %}bg-info{% endif %}"
-              style="width:{{ tr.urgency_score }}%"></div>
+          <div class="progress">
+            <div class="progress-bar {% if tr.completeness_score >= 70 %}bg-success{% elif tr.completeness_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                 style="width:{{ tr.completeness_score }}%"></div>
+          </div>
+        </div>
+        <div class="rq-score">
+          <div class="rq-score-header">
+            <span class="rq-score-name">Urgency</span>
+            <span class="rq-score-num">{{ tr.urgency_score }}/100</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar {% if tr.urgency_score >= 70 %}bg-danger{% elif tr.urgency_score >= 40 %}bg-warning{% else %}bg-info{% endif %}"
+                 style="width:{{ tr.urgency_score }}%"></div>
           </div>
         </div>
 
-        {# Triage notes #}
+        {# Notes #}
         {% if tr.triage_notes %}
-        <div class="alert alert-light border p-2 mb-2 small">
-          <strong>Assessment:</strong> {{ tr.triage_notes }}
+        <div class="rq-triage-notes">
+          <strong style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Assessment</strong><br>
+          {{ tr.triage_notes }}
         </div>
         {% endif %}
 
         {# Flags #}
         {% if tr.flags %}
-        <div class="mb-2">
+        <div class="mt-3">
           {% for flag in tr.flags %}
-            <div class="small text-muted">{{ flag }}</div>
+            <div style="font-size: 12px; color: var(--rq-text-muted); padding: 2px 0;">{{ flag }}</div>
           {% endfor %}
         </div>
         {% endif %}
 
         {# Missing info #}
         {% if tr.missing_information %}
-        <div class="alert alert-warning p-2 mb-0 small">
-          <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Missing Information:</strong>
+        <div class="alert alert-warning p-2 mb-0 mt-3" style="font-size: 13px;">
+          <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Missing:</strong>
           <ul class="mb-0 mt-1 ps-3">
             {% for item in tr.missing_information %}
               <li>{{ item }}</li>
@@ -221,18 +254,20 @@
         {% endif %}
       </div>
 
-      <div class="card-footer bg-white text-muted small">
+      <div class="rq-triage-footer">
         Triaged {{ tr.triaged_at.strftime('%b %d, %Y at %H:%M') if tr.triaged_at else '—' }}
       </div>
     </div>
+
     {% else %}
-    <div class="card shadow-sm mb-4 border-warning">
+    {# Not triaged yet #}
+    <div class="card mb-4" style="border-color: var(--rq-warning); border-left-width: 3px;">
       <div class="card-body text-center py-4">
-        <i class="bi bi-hourglass-split text-warning fs-2"></i>
-        <p class="mb-2 mt-2">This referral has not been triaged yet.</p>
+        <i class="bi bi-hourglass-split" style="font-size: 24px; color: var(--rq-warning);"></i>
+        <p class="mb-2 mt-2" style="font-size: 14px;">This referral has not been triaged yet.</p>
         <form action="{{ url_for('referrals.retriage', referral_id=referral.id) }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-robot me-1"></i>Run Triage
           </button>
         </form>
@@ -242,32 +277,34 @@
 
     {# Missing workup panel #}
     {% if referral.missing_workup and referral.missing_workup|length > 0 %}
-    <div class="card shadow-sm mb-4 border-warning">
-      <div class="card-header bg-warning bg-opacity-10">
-        <h5 class="mb-0 fw-bold">
-          <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Missing Workup
+    <div class="rq-missing-panel">
+      <div class="rq-missing-header">
+        <i class="bi bi-exclamation-triangle-fill" style="color: var(--rq-warning);"></i>
+        <h5>Missing Workup
           {% if referral.clinical_category %}
-            <span class="badge bg-secondary fw-normal ms-1">{{ referral.clinical_category|replace('_', ' ')|title }}</span>
+            <span class="badge bg-secondary fw-normal ms-1" style="font-size: 10px;">{{ referral.clinical_category|replace('_', ' ')|title }}</span>
           {% endif %}
         </h5>
       </div>
-      <div class="card-body">
-        <ul class="list-unstyled mb-3">
-          {% for item in referral.missing_workup %}
-            <li class="mb-1">
-              <i class="bi bi-x-circle text-danger me-1"></i>{{ item }}
-            </li>
-          {% endfor %}
-        </ul>
-        <label class="form-label fw-bold small">Draft message to referring physician:</label>
-        <textarea class="form-control mb-2" rows="4" id="workupMessage">Loading template...</textarea>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}" class="btn btn-warning btn-sm">
-            <i class="bi bi-send me-1"></i>Send via OceanMD
-          </a>
-          <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('workupMessage').value)">
-            <i class="bi bi-clipboard me-1"></i>Copy
-          </button>
+      <div class="rq-missing-body">
+        {% for item in referral.missing_workup %}
+          <div class="rq-missing-item">
+            <i class="bi bi-x-circle-fill"></i>
+            <span>{{ item }}</span>
+          </div>
+        {% endfor %}
+
+        <div style="margin-top: var(--rq-space-md); padding-top: var(--rq-space-md); border-top: 1px solid var(--rq-divider);">
+          <label class="form-label" style="font-size: 12px; font-weight: 600;">Draft message to referring physician:</label>
+          <textarea class="form-control mb-2" rows="4" id="workupMessage" style="font-size: 13px;">Loading template...</textarea>
+          <div class="d-flex gap-2">
+            <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}" class="btn btn-warning btn-sm">
+              <i class="bi bi-send me-1"></i>Send via OceanMD
+            </a>
+            <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('workupMessage').value)">
+              <i class="bi bi-clipboard me-1"></i>Copy
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -294,19 +331,21 @@
     })();
     </script>
     {% elif referral.triage_result and referral.triage_result.completeness_score >= 80 %}
-    <div class="card shadow-sm mb-4 border-success">
+    <div class="card mb-4" style="border-color: var(--rq-success); border-left-width: 3px;">
       <div class="card-body text-center py-3">
-        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Workup Complete</span>
+        <span class="badge" style="background: var(--rq-success); color: #fff; font-size: 13px; padding: 6px 14px;">
+          <i class="bi bi-check-circle me-1"></i>Workup Complete
+        </span>
       </div>
     </div>
     {% endif %}
 
-    {# Action buttons #}
-    <div class="card shadow-sm">
-      <div class="card-header bg-white">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-send-fill text-success me-2"></i>Actions</h5>
+    {# Actions #}
+    <div class="rq-actions-panel mt-4">
+      <div class="rq-actions-header">
+        <h5><i class="bi bi-send-fill me-2" style="color: var(--rq-success);"></i>Actions</h5>
       </div>
-      <div class="card-body d-grid gap-2">
+      <div class="rq-actions-body">
         <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}"
            class="btn btn-success">
           <i class="bi bi-reply-fill me-1"></i>Send Feedback to Referring Physician

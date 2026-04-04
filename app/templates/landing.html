@@ -1,68 +1,128 @@
 {% extends "base.html" %}
-{% block title %}ReferralQ — Specialist Referral Triage{% endblock %}
+{% block title %}ReferralQ — Specialist Referral Triage for BC Physicians{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <!-- Hero -->
-  <div class="text-center mb-5" style="max-width: 700px; margin: 0 auto;">
-    <h1 class="fw-bold mb-3" style="font-family: 'Plus Jakarta Sans', sans-serif; color: #1B6B93;">
-      <i class="bi bi-clipboard2-pulse-fill me-2"></i>ReferralQ
-      <span class="badge bg-warning text-dark ms-1" style="font-size: 0.5em; vertical-align: middle;">BC</span>
-    </h1>
-    <p class="lead fw-semibold mb-2">Specialist referral triage for Canadian physicians</p>
-    <p class="text-muted mb-4">Faster triage. Pre-referral pathways. Analytics that prove it's working.</p>
-    <div class="d-flex justify-content-center gap-3 flex-wrap">
-      <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg px-4"
-         style="background-color: #1B6B93; border-color: #1B6B93;">Start Free</a>
-      <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">Log In</a>
-    </div>
-  </div>
+<div class="rq-landing">
+  <div class="container" style="max-width: 1080px;">
 
-  <!-- Value Props -->
-  <div class="row g-4 mb-5 justify-content-center" style="max-width: 960px; margin: 0 auto;">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body text-center p-4">
-          <div class="mb-3">
-            <i class="bi bi-speedometer2 fs-1" style="color: #1B6B93;"></i>
-          </div>
-          <h5 class="card-title fw-bold">Efficiency Dashboard</h5>
-          <p class="card-text text-muted small">Category-grouped referrals, batch actions, completeness tracking.</p>
-        </div>
+    {# Hero #}
+    <div class="rq-hero">
+      <div class="rq-hero-logo">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="ReferralQ" height="44">
       </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body text-center p-4">
-          <div class="mb-3">
-            <i class="bi bi-signpost-split fs-1" style="color: #1B6B93;"></i>
-          </div>
-          <h5 class="card-title fw-bold">Pre-Referral Pathways</h5>
-          <p class="card-text text-muted small">Guide FPs with condition-specific workup checklists.</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body text-center p-4">
-          <div class="mb-3">
-            <i class="bi bi-graph-up-arrow fs-1" style="color: #1B6B93;"></i>
-          </div>
-          <h5 class="card-title fw-bold">Analytics</h5>
-          <p class="card-text text-muted small">Track referral volume, completeness trends, turnaround time.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+      <h1>
+        Triage referrals<br>
+        <span class="rq-hero-accent rq-hero-rotate" id="rq-hero-rotate">in minutes, not hours.</span>
+      </h1>
+      <p class="rq-hero-sub">
+        The triage platform for specialist physicians managing referral queues.
+        AI-powered categorization, pre-referral pathways, and analytics — built for
+        urologists, GI, and orthopedics across BC.
+      </p>
 
-  <!-- Secondary links -->
-  <div class="text-center">
-    <p class="text-muted mb-1">
-      Already have an account? <a href="{{ url_for('auth.login') }}" style="color: #1B6B93;">Log in</a>
-    </p>
-    <p class="text-muted">
-      <a href="/pathways" style="color: #1B6B93;">View public pathways &rarr;</a>
-    </p>
+      {# Trust signals #}
+      <div class="rq-trust-bar">
+        <span class="rq-trust-item">
+          <i class="bi bi-lock-fill"></i> PIPEDA Compliant
+        </span>
+        <span class="rq-trust-sep"></span>
+        <span class="rq-trust-item">
+          <i class="bi bi-shield-check"></i> BC Data Residency
+        </span>
+        <span class="rq-trust-sep"></span>
+        <span class="rq-trust-item">
+          <i class="bi bi-check-circle"></i> SOC 2 In Progress
+        </span>
+        <span class="rq-trust-sep"></span>
+        <span class="rq-trust-item">
+          <i class="bi bi-key-fill"></i> 256-bit Encryption
+        </span>
+      </div>
+
+      <div class="d-flex gap-3 mt-4 flex-wrap">
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg">
+          Start Free
+        </a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg">
+          Log In
+        </a>
+      </div>
+    </div>
+
+    {# Value props #}
+    <div class="rq-value-grid">
+      <div class="rq-value-card">
+        <div class="rq-value-icon">
+          <i class="bi bi-speedometer2"></i>
+        </div>
+        <h5>Efficiency Dashboard</h5>
+        <p>Category-grouped referrals with batch actions, completeness tracking, and priority at a glance.</p>
+      </div>
+      <div class="rq-value-card">
+        <div class="rq-value-icon">
+          <i class="bi bi-signpost-split"></i>
+        </div>
+        <h5>Pre-Referral Pathways</h5>
+        <p>Guide family physicians with condition-specific workup checklists before they refer.</p>
+      </div>
+      <div class="rq-value-card">
+        <div class="rq-value-icon">
+          <i class="bi bi-graph-up-arrow"></i>
+        </div>
+        <h5>Analytics</h5>
+        <p>Track referral volume, completeness trends, and turnaround time. Prove the system works.</p>
+      </div>
+    </div>
+
+    {# Quantitative benefits #}
+    <div class="rq-benefits-strip">
+      <div class="rq-benefit-stat">
+        <div class="rq-benefit-number">80%</div>
+        <div class="rq-benefit-label">Faster Triage</div>
+      </div>
+      <div class="rq-benefit-stat">
+        <div class="rq-benefit-number">90%</div>
+        <div class="rq-benefit-label">Referral Completeness</div>
+      </div>
+      <div class="rq-benefit-stat">
+        <div class="rq-benefit-number">4.2 hrs</div>
+        <div class="rq-benefit-label">Avg Turnaround</div>
+      </div>
+    </div>
+
+    {# Secondary links #}
+    <div class="rq-landing-footer-links">
+      <p class="mb-2">
+        Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
+      </p>
+      <p class="mb-0">
+        <a href="/pathways">View public pathways <i class="bi bi-arrow-right"></i></a>
+      </p>
+    </div>
+
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var phrases = [
+    'in minutes, not hours.',
+    'tailored to your practice.',
+    'so patients are seen sooner.'
+  ];
+  var el = document.getElementById('rq-hero-rotate');
+  if (!el) return;
+  var idx = 0;
+  setInterval(function() {
+    el.classList.add('rq-hero-rotate--out');
+    setTimeout(function() {
+      idx = (idx + 1) % phrases.length;
+      el.textContent = phrases[idx];
+      el.classList.remove('rq-hero-rotate--out');
+    }, 150);
+  }, 3000);
+})();
+</script>
 {% endblock %}

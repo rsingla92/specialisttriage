@@ -1,67 +1,77 @@
 {# Quick review panel — loaded via AJAX into offcanvas #}
-<div class="p-3">
+<div class="rq-panel">
+
   {# Patient header #}
-  <div class="d-flex justify-content-between align-items-start mb-3">
+  <div class="rq-panel-header">
     <div>
-      <h5 class="fw-bold mb-0">{{ referral.patient_full_name }}</h5>
-      <div class="text-muted small">Age {{ referral.patient_age }} | {{ referral.referring_physician_name }}</div>
+      <div class="rq-panel-patient">{{ referral.patient_full_name }}</div>
+      <div class="rq-panel-meta">Age {{ referral.patient_age }} | {{ referral.referring_physician_name }}</div>
     </div>
     {% if referral.priority %}
-      {# Priority badge - same as dashboard #}
       {% set p = referral.priority %}
-      {% if p == 'urgent' %}<span class="badge bg-danger">Urgent</span>
-      {% elif p == 'high' %}<span class="badge bg-warning text-dark">High</span>
-      {% elif p == 'routine' %}<span class="badge bg-primary">Routine</span>
-      {% else %}<span class="badge bg-secondary">{{ p|title }}</span>{% endif %}
+      {% if p == 'urgent' %}<span class="rq-priority rq-priority--urgent">Urgent</span>
+      {% elif p == 'high' %}<span class="rq-priority rq-priority--high">High</span>
+      {% elif p == 'routine' %}<span class="rq-priority rq-priority--routine">Routine</span>
+      {% else %}<span class="rq-priority rq-priority--low">{{ p|title }}</span>{% endif %}
     {% endif %}
   </div>
 
-  {# Clinical summary #}
-  <div class="mb-3">
-    <label class="form-label fw-bold small text-muted">Chief Complaint</label>
-    <p class="mb-2">{{ referral.chief_complaint }}</p>
+  {# Chief complaint #}
+  <div class="rq-clinical-section">
+    <h6>Chief Complaint</h6>
+    <p>{{ referral.chief_complaint }}</p>
   </div>
 
   {% if referral.clinical_notes %}
-  <div class="mb-3">
-    <label class="form-label fw-bold small text-muted">Clinical Notes</label>
-    <p class="mb-2 small">{{ referral.clinical_notes }}</p>
+  <div class="rq-clinical-section">
+    <h6>Clinical Notes</h6>
+    <p style="font-size: 13px;">{{ referral.clinical_notes }}</p>
   </div>
   {% endif %}
 
   {% if referral.relevant_investigations %}
-  <div class="mb-3">
-    <label class="form-label fw-bold small text-muted">Investigations</label>
-    <p class="mb-2 small">{{ referral.relevant_investigations }}</p>
+  <div class="rq-clinical-section">
+    <h6>Investigations</h6>
+    <p style="font-size: 13px;">{{ referral.relevant_investigations }}</p>
   </div>
   {% endif %}
 
-  {# Triage scores (if triaged) #}
+  {# Triage scores #}
   {% if referral.triage_result %}
   {% set tr = referral.triage_result %}
-  <div class="mb-3">
-    <label class="form-label fw-bold small text-muted">Triage Scores</label>
-    <div class="row g-2">
-      <div class="col-4 text-center">
-        <div class="small text-muted">Appropriateness</div>
-        <div class="fw-bold">{{ tr.appropriateness_score }}%</div>
+  <div class="rq-clinical-section">
+    <h6>Triage Scores</h6>
+    <div class="rq-panel-scores">
+      <div class="rq-panel-score">
+        <div class="rq-panel-score-label">Appropriateness</div>
+        <div class="rq-panel-score-value">{{ tr.appropriateness_score }}%</div>
+        <div class="rq-completeness-bar" style="width: 100%; height: 3px;">
+          <div class="rq-completeness-fill" style="width: {{ tr.appropriateness_score }}%; background: var(--rq-primary);"></div>
+        </div>
       </div>
-      <div class="col-4 text-center">
-        <div class="small text-muted">Completeness</div>
-        <div class="fw-bold">{{ tr.completeness_score }}%</div>
+      <div class="rq-panel-score">
+        <div class="rq-panel-score-label">Completeness</div>
+        <div class="rq-panel-score-value">{{ tr.completeness_score }}%</div>
+        <div class="rq-completeness-bar" style="width: 100%; height: 3px;">
+          <div class="rq-completeness-fill" style="width: {{ tr.completeness_score }}%; background: var(--rq-primary);"></div>
+        </div>
       </div>
-      <div class="col-4 text-center">
-        <div class="small text-muted">Urgency</div>
-        <div class="fw-bold">{{ tr.urgency_score }}%</div>
+      <div class="rq-panel-score">
+        <div class="rq-panel-score-label">Urgency</div>
+        <div class="rq-panel-score-value">{{ tr.urgency_score }}%</div>
+        <div class="rq-completeness-bar" style="width: 100%; height: 3px;">
+          <div class="rq-completeness-fill" style="width: {{ tr.urgency_score }}%; background: {% if tr.urgency_score > 70 %}var(--rq-error){% elif tr.urgency_score > 40 %}var(--rq-warning){% else %}var(--rq-primary){% endif %};"></div>
+        </div>
       </div>
     </div>
   </div>
 
   {# Flags #}
   {% if tr.flags %}
-  <div class="mb-3">
+  <div class="rq-clinical-section">
+    <h6>Flags</h6>
     {% for flag in tr.flags %}
-    <div class="small">{{ flag }}</div>
+    <div class="rq-panel-flag">{{ flag }}</div>
     {% endfor %}
   </div>
   {% endif %}
@@ -69,28 +79,30 @@
 
   {# Missing information #}
   {% if referral.triage_result and referral.triage_result.missing_information and referral.triage_result.missing_information|length > 0 %}
-  <div class="alert alert-warning p-2 mb-3">
-    <strong class="small">Missing Information:</strong>
-    <ul class="mb-0 small ps-3">
+  <div class="rq-panel-missing">
+    <div class="rq-label" style="color: var(--rq-warning); margin-bottom: var(--rq-space-sm);">Missing Information</div>
     {% for item in referral.triage_result.missing_information %}
-      <li>{{ item }}</li>
+    <div class="rq-panel-missing-item">
+      <i class="bi bi-x-circle-fill" style="color: var(--rq-error); font-size: 11px; margin-top: 2px; flex-shrink: 0;"></i>
+      <span>{{ item }}</span>
+    </div>
     {% endfor %}
-    </ul>
   </div>
   {% endif %}
 
   {# Action buttons #}
-  <hr>
-  <div class="d-flex gap-2 flex-wrap">
-    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=accepted"
-       class="btn btn-success btn-sm flex-fill">Accept</a>
-    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=needs_info"
-       class="btn btn-warning btn-sm flex-fill">Request Info</a>
-    <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=declined"
-       class="btn btn-outline-danger btn-sm flex-fill">Decline</a>
+  <div class="rq-panel-actions">
+    <div class="rq-panel-action-row">
+      <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=accepted"
+         class="btn btn-success btn-sm" style="flex: 1;">Accept</a>
+      <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=needs_info"
+         class="btn btn-warning btn-sm" style="flex: 1;">Request Info</a>
+      <a href="{{ url_for('referrals.send_feedback', referral_id=referral.id) }}?decision=declined"
+         class="btn btn-outline-secondary btn-sm" style="flex: 1; color: var(--rq-error); border-color: var(--rq-error);">Decline</a>
+    </div>
+    <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}"
+       class="btn btn-outline-secondary btn-sm" style="width: 100%;">
+      Full Details
+    </a>
   </div>
-  <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}"
-     class="btn btn-outline-secondary btn-sm w-100 mt-2">
-    Full Details →
-  </a>
 </div>

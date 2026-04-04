@@ -2,52 +2,58 @@
 {% block title %}Pre-Referral Pathways – ReferralQ{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 800px;">
-  <div class="text-center mb-5">
-    <h1 class="h2 fw-bold">Pre-Referral Pathways</h1>
-    <p class="text-muted">Before referring, please complete the recommended workup for your patient's condition. Based on BC/GPAC and Canadian clinical guidelines.</p>
+<div class="container" style="max-width: 860px;">
+
+  <!-- Page header -->
+  <div class="rq-pathway-page-header">
+    <div class="rq-pathway-eyebrow rq-label">Clinical Pathways</div>
+    <h1>Pre-Referral Pathways</h1>
+    <p class="rq-pathway-subtitle">Before referring, please complete the recommended workup for your patient's condition. Based on BC/GPAC and Canadian clinical guidelines.</p>
   </div>
 
   {% for spec in specialties %}
-  <h3 class="fw-bold mb-3 mt-4">{{ spec.specialty.name }}
-    {% if spec.specialty.description and 'DRAFT' in spec.specialty.description %}
-      <span class="badge bg-warning text-dark ms-1 fs-6">DRAFT</span>
-    {% endif %}
-  </h3>
-  <div class="row g-3 mb-4">
-    {% for cat in spec.categories %}
-    <div class="col-md-6">
+  <div class="rq-pathway-group">
+    <div class="rq-pathway-group-header">
+      <h3 class="rq-label" style="margin: 0; font-size: 11px;">{{ spec.specialty.name }}</h3>
+      {% if spec.specialty.description and 'DRAFT' in spec.specialty.description %}
+        <span class="rq-pathway-draft-tag">DRAFT</span>
+      {% endif %}
+    </div>
+
+    <div class="rq-pathway-grid">
+      {% for cat in spec.categories %}
       <a href="{{ url_for('pathways.pathway', specialty_slug=spec.specialty.slug, category_slug=cat.slug) }}"
-         class="card text-decoration-none h-100 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title fw-bold text-dark">{{ cat.display_name }}</h5>
-          <p class="card-text text-muted small mb-0">
-            {{ cat.workup_items|length }} workup items.
+         class="rq-pathway-card">
+        <div class="rq-pathway-card-body">
+          <h5 class="rq-pathway-card-title">{{ cat.display_name }}</h5>
+          <p class="rq-pathway-card-meta">
+            {{ cat.workup_items|length }} workup items
             {% if cat.guidance and cat.guidance.source %}
-              <br><i class="bi bi-book me-1"></i>{{ cat.guidance.source }}
+              <span class="rq-pathway-card-source"><i class="bi bi-book"></i> {{ cat.guidance.source }}</span>
             {% endif %}
           </p>
         </div>
-        <div class="card-footer bg-white border-0 text-end">
-          <span class="text-primary small">View pathway <i class="bi bi-chevron-right"></i></span>
+        <div class="rq-pathway-card-arrow">
+          <i class="bi bi-arrow-right"></i>
         </div>
       </a>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
   {% endfor %}
 
   {% if not specialties %}
-  <div class="text-center py-5">
-    <p class="text-muted">No pathways configured yet. Run <code>flask seed-specialty</code> to add clinical data.</p>
+  <div class="rq-empty">
+    <div class="rq-empty-icon"><i class="bi bi-clipboard2-pulse"></i></div>
+    <p class="rq-empty-text">No pathways configured yet.</p>
+    <p class="rq-caption" style="color: var(--rq-text-muted);">Run <code>flask seed-specialty</code> to add clinical data.</p>
   </div>
   {% endif %}
 
-  <div class="text-center mt-5">
-    <p class="text-muted small">
-      These pathways are based on BC GPAC and Alberta SpecialistLink guidelines.
-      DRAFT pathways need specialist review before clinical use.
-    </p>
+  <div class="rq-pathway-footer-note">
+    These pathways are based on BC GPAC and Alberta SpecialistLink guidelines.
+    DRAFT pathways need specialist review before clinical use.
   </div>
+
 </div>
 {% endblock %}

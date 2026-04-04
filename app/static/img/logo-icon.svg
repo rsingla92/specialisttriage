@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- ReferralQ icon — Stylized Q with triage arrow -->
+  <!-- Q circle -->
+  <circle cx="22" cy="22" r="16" stroke="#1B6B93" stroke-width="3.5" fill="none"/>
+  <!-- Q tail as directional triage arrow -->
+  <path d="M 30 30 L 38 38" stroke="#1B6B93" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Arrow head -->
+  <polygon points="39,34 43,42 35,38" fill="#1B6B93"/>
+  <!-- Inner triage lines (three horizontal bars suggesting sorting/prioritization) -->
+  <line x1="14" y1="16" x2="28" y2="16" stroke="#1B6B93" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="14" y1="22" x2="24" y2="22" stroke="#1B6B93" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="14" y1="28" x2="20" y2="28" stroke="#1B6B93" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+</svg>

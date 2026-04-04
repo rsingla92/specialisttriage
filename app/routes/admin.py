@@ -201,10 +201,17 @@ def create_category():
         return redirect(url_for("admin.rules_list"))
 
     name = request.form.get("display_name", "").strip()
-    slug = request.form.get("slug", "").strip().lower().replace(" ", "_")
 
-    if not name or not slug:
-        flash("Name and slug are required.", "danger")
+    if not name:
+        flash("Display name is required.", "danger")
+        return redirect(url_for("admin.rules_list"))
+
+    # Auto-generate slug from display name: lowercase, strip special chars, spaces to underscores
+    slug = re.sub(r"[^a-z0-9 _-]", "", name.lower()).strip()
+    slug = re.sub(r"[\s-]+", "_", slug)
+
+    if not slug:
+        flash("Could not generate a valid slug from that name.", "danger")
         return redirect(url_for("admin.rules_list"))
 
     existing = ClinicalCategory.query.filter_by(

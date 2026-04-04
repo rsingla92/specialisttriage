@@ -2,96 +2,117 @@
 {% block title %}Send Feedback – ReferralQ{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-    <li class="breadcrumb-item">
-      <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}">
-        Referral #{{ referral.id }}
-      </a>
-    </li>
-    <li class="breadcrumb-item active">Send Feedback</li>
-  </ol>
-</nav>
+{# Breadcrumb + ID #}
+<div class="rq-detail-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}">
+          {{ referral.patient_full_name }}
+        </a>
+      </li>
+      <li class="breadcrumb-item active">Send Feedback</li>
+    </ol>
+  </nav>
+  <span class="rq-detail-id">REF-{{ referral.id }}</span>
+</div>
 
 <div class="row justify-content-center">
   <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white">
-        <h4 class="mb-0 fw-bold">
-          <i class="bi bi-reply-fill text-success me-2"></i>Send Feedback to Referring Physician
-        </h4>
-        <p class="text-muted small mb-0 mt-1">
-          Patient: <strong>{{ referral.patient_full_name }}</strong> &mdash;
-          Referring: <strong>{{ referral.referring_physician_name }}</strong>
-        </p>
+
+    {# Context strip #}
+    <div class="rq-feedback-context">
+      <div class="rq-data-row">
+        <div class="rq-data-label">Patient</div>
+        <div class="rq-data-value fw-semibold">{{ referral.patient_full_name }}</div>
+      </div>
+      <div class="rq-data-row">
+        <div class="rq-data-label">Referring MD</div>
+        <div class="rq-data-value">{{ referral.referring_physician_name }}</div>
+      </div>
+    </div>
+
+    {% if referral.triage_result %}
+    <div class="rq-feedback-triage-summary">
+      <h6 class="rq-label" style="margin-bottom: var(--rq-space-sm);">Triage Summary</h6>
+      <p style="font-size: 13px; color: var(--rq-text-secondary); margin: 0; line-height: 1.5;">{{ referral.triage_result.triage_notes }}</p>
+    </div>
+    {% endif %}
+
+    {# Decision form #}
+    <div class="card">
+      <div class="card-header">
+        <h5 style="margin: 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-reply-fill" style="color: var(--rq-primary);"></i>
+          Specialist Feedback
+        </h5>
       </div>
       <div class="card-body">
-
-        {% if referral.triage_result %}
-        <div class="alert alert-light border small mb-4">
-          <strong>Triage summary:</strong> {{ referral.triage_result.triage_notes }}
-        </div>
-        {% endif %}
-
         <form method="post" novalidate>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="mb-3">
-            <label class="form-label fw-bold">Decision <span class="text-danger">*</span></label>
-            <div class="d-flex gap-3 flex-wrap">
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="decision" id="dec_accepted" value="accepted" required>
-                <label class="form-check-label" for="dec_accepted">
-                  <span class="badge bg-success">Accept Referral</span>
-                </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="decision" id="dec_declined" value="declined">
-                <label class="form-check-label" for="dec_declined">
-                  <span class="badge bg-danger">Decline Referral</span>
-                </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="decision" id="dec_needs_info" value="needs_info">
-                <label class="form-check-label" for="dec_needs_info">
-                  <span class="badge bg-warning text-dark">Request More Information</span>
-                </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="decision" id="dec_redirected" value="redirected">
-                <label class="form-check-label" for="dec_redirected">
-                  <span class="badge bg-secondary">Redirect to Another Provider</span>
-                </label>
-              </div>
+
+          {# Decision radio group #}
+          <div class="rq-clinical-section">
+            <h6>Decision</h6>
+            <div class="rq-feedback-decisions">
+              <label class="rq-feedback-decision-option" for="dec_accepted">
+                <input type="radio" name="decision" id="dec_accepted" value="accepted" required>
+                <span class="rq-feedback-decision-label">
+                  <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--accept"></span>
+                  Accept Referral
+                </span>
+              </label>
+              <label class="rq-feedback-decision-option" for="dec_declined">
+                <input type="radio" name="decision" id="dec_declined" value="declined">
+                <span class="rq-feedback-decision-label">
+                  <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--decline"></span>
+                  Decline Referral
+                </span>
+              </label>
+              <label class="rq-feedback-decision-option" for="dec_needs_info">
+                <input type="radio" name="decision" id="dec_needs_info" value="needs_info">
+                <span class="rq-feedback-decision-label">
+                  <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--info"></span>
+                  Request More Information
+                </span>
+              </label>
+              <label class="rq-feedback-decision-option" for="dec_redirected">
+                <input type="radio" name="decision" id="dec_redirected" value="redirected">
+                <span class="rq-feedback-decision-label">
+                  <span class="rq-feedback-decision-indicator rq-feedback-decision-indicator--redirect"></span>
+                  Redirect to Another Provider
+                </span>
+              </label>
             </div>
           </div>
 
-          <div class="mb-3">
-            <label for="message" class="form-label fw-bold">
-              Message to referring physician <span class="text-danger">*</span>
-            </label>
+          {# Message #}
+          <div class="rq-clinical-section">
+            <h6>Message to Referring Physician</h6>
             <textarea class="form-control" id="message" name="message" rows="5"
-              placeholder="Dear Dr. ..., Thank you for your referral. After review…" required></textarea>
-            <div class="form-text">This message will be sent via OceanMD to the referring physician.</div>
+              placeholder="Dear Dr. ..., Thank you for your referral. After review..." required></textarea>
+            <div class="form-text" style="margin-top: var(--rq-space-sm);">This message will be sent via OceanMD to the referring physician.</div>
           </div>
 
-          <div class="mb-3" id="workupSection">
-            <label for="recommended_workup" class="form-label">Recommended workup before appointment
-              <span class="text-muted small">(optional)</span></label>
+          {# Recommended workup #}
+          <div class="rq-clinical-section" id="workupSection">
+            <h6>Recommended Workup <span style="font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--rq-text-muted);">(optional)</span></h6>
             <textarea class="form-control" id="recommended_workup" name="recommended_workup" rows="3"
-              placeholder="e.g. Urinalysis, urine culture, renal ultrasound, voiding diary…"></textarea>
+              placeholder="e.g. Urinalysis, urine culture, renal ultrasound, voiding diary..."></textarea>
           </div>
 
-          <div class="mb-4" id="redirectSection" style="display:none">
-            <label for="redirect_to" class="form-label">Redirect to
-              <span class="text-muted small">(service or provider)</span></label>
+          {# Redirect target (conditional) #}
+          <div class="rq-clinical-section" id="redirectSection" style="display:none">
+            <h6>Redirect To</h6>
             <input type="text" class="form-control" id="redirect_to" name="redirect_to"
               placeholder="e.g. Physiotherapy, Nephrology, Pelvic Floor Physiotherapist">
           </div>
 
-          <div class="d-flex gap-3">
-            <button type="submit" class="btn btn-success">
-              <i class="bi bi-send-fill me-1"></i>Send Feedback
+          {# Actions #}
+          <div style="border-top: 1px solid var(--rq-divider); padding-top: var(--rq-space-md); display: flex; gap: var(--rq-space-sm);">
+            <button type="submit" class="btn btn-primary">
+              Send Feedback
             </button>
             <a href="{{ url_for('referrals.detail', referral_id=referral.id) }}"
                class="btn btn-outline-secondary">Cancel</a>
@@ -99,6 +120,7 @@
         </form>
       </div>
     </div>
+
   </div>
 </div>
 {% endblock %}

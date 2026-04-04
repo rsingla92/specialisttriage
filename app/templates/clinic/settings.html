@@ -2,63 +2,321 @@
 {% block title %}Settings – {{ clinic.name }} – ReferralQ{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{{ url_for('clinic.team') }}">{{ clinic.name }}</a></li>
-    <li class="breadcrumb-item active">Settings</li>
-  </ol>
-</nav>
-
-<h1 class="h3 fw-bold mb-4">Clinic Settings</h1>
-
-<div class="row">
-  <div class="col-md-6">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white"><h6 class="mb-0">Referral Queue Mode</h6></div>
-      <div class="card-body">
-        <form action="{{ url_for('clinic.update_settings') }}" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% set mode = clinic.queue_mode %}
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="queue_mode" value="hybrid" id="modeHybrid"
-                   {% if mode == 'hybrid' %}checked{% endif %}>
-            <label class="form-check-label" for="modeHybrid">
-              <strong>Hybrid</strong> (recommended)
-              <div class="text-muted small">Referrals go to the clinic pool. Specialists claim from the pool, or get auto-assigned when named specifically.</div>
-            </label>
-          </div>
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="queue_mode" value="shared" id="modeShared"
-                   {% if mode == 'shared' %}checked{% endif %}>
-            <label class="form-check-label" for="modeShared">
-              <strong>Shared</strong>
-              <div class="text-muted small">All referrals go to the clinic pool. Specialists claim what they want to review.</div>
-            </label>
-          </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="radio" name="queue_mode" value="individual" id="modeIndividual"
-                   {% if mode == 'individual' %}checked{% endif %}>
-            <label class="form-check-label" for="modeIndividual">
-              <strong>Individual</strong>
-              <div class="text-muted small">Referrals assigned directly to the importing specialist. No shared pool.</div>
-            </label>
-          </div>
-          <button type="submit" class="btn btn-primary btn-sm">Save</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-6">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white"><h6 class="mb-0">Clinic Details</h6></div>
-      <div class="card-body">
-        <div class="mb-2"><strong>Name:</strong> {{ clinic.name }}</div>
-        <div class="mb-2"><strong>Slug:</strong> {{ clinic.slug }}</div>
-        {% if clinic.specialty %}<div class="mb-2"><strong>Specialty:</strong> {{ clinic.specialty.name }}</div>{% endif %}
-        <div class="mb-2"><strong>Subscription:</strong> <span class="badge bg-success">{{ clinic.subscription_tier|title }}</span></div>
-      </div>
-    </div>
+<div class="rq-page-header">
+  <div>
+    <h1>Settings</h1>
+    <span class="rq-page-context">{{ clinic.name }}</span>
   </div>
 </div>
+
+<div class="rq-settings-hub">
+  {# Sidebar nav #}
+  <nav class="rq-settings-sidebar" id="settingsSidebar">
+    <a href="#general" class="rq-settings-nav-item active" data-section="general">
+      <i class="bi bi-building"></i> General
+    </a>
+    <a href="#queue" class="rq-settings-nav-item" data-section="queue">
+      <i class="bi bi-stack"></i> Queue Management
+    </a>
+    <a href="#team" class="rq-settings-nav-item" data-section="team">
+      <i class="bi bi-people"></i> Team
+    </a>
+    <a href="#integrations" class="rq-settings-nav-item" data-section="integrations">
+      <i class="bi bi-plug"></i> Integrations
+    </a>
+    <a href="#privacy" class="rq-settings-nav-item" data-section="privacy">
+      <i class="bi bi-shield-lock"></i> Privacy &amp; Security
+    </a>
+    <a href="#billing" class="rq-settings-nav-item" data-section="billing">
+      <i class="bi bi-credit-card"></i> Billing
+    </a>
+  </nav>
+
+  {# Content area #}
+  <div class="rq-settings-content">
+
+    {# ── General ── #}
+    <section class="rq-settings-section" id="section-general">
+      <h2 class="rq-settings-section-title">General</h2>
+      <form action="{{ url_for('clinic.update_general') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="rq-settings-field">
+          <label class="rq-label" for="clinicName">Clinic Name</label>
+          <input type="text" id="clinicName" name="clinic_name" class="form-control form-control-sm"
+                 value="{{ clinic.name }}" required>
+        </div>
+
+        <div class="rq-settings-field">
+          <label class="rq-label" for="clinicAddress">Address</label>
+          <input type="text" id="clinicAddress" name="clinic_address" class="form-control form-control-sm"
+                 value="{{ clinic.address or '' }}" placeholder="Street address, city, province">
+        </div>
+
+        <div class="rq-settings-readonly-group">
+          <div class="rq-settings-readonly">
+            <span class="rq-label">Specialty</span>
+            <span class="rq-settings-readonly-value">{{ clinic.specialty.name if clinic.specialty else 'Not set' }}</span>
+          </div>
+          <div class="rq-settings-readonly">
+            <span class="rq-label">Subscription Tier</span>
+            <span class="rq-settings-readonly-value">
+              <span class="badge bg-success">{{ clinic.subscription_tier|title }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--rq-space-lg);">
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </section>
+
+    {# ── Queue Management ── #}
+    <section class="rq-settings-section" id="section-queue" style="display: none;">
+      <h2 class="rq-settings-section-title">Queue Management</h2>
+      <div class="rq-clinic-panel">
+        <div class="rq-clinic-panel-header">
+          <h6 class="rq-label" style="margin: 0;">Referral Queue Mode</h6>
+        </div>
+        <div class="rq-clinic-panel-body">
+          <form action="{{ url_for('clinic.update_settings') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% set mode = clinic.queue_mode %}
+
+            <label class="rq-clinic-radio-card {% if mode == 'hybrid' %}rq-clinic-radio-card--active{% endif %}">
+              <input type="radio" name="queue_mode" value="hybrid" id="modeHybrid"
+                     {% if mode == 'hybrid' %}checked{% endif %}>
+              <div class="rq-clinic-radio-content">
+                <div class="rq-clinic-radio-title">
+                  Hybrid
+                  <span class="rq-clinic-recommended-tag">Recommended</span>
+                </div>
+                <div class="rq-clinic-radio-desc">Referrals go to the clinic pool. Specialists claim from the pool, or get auto-assigned when named specifically.</div>
+              </div>
+            </label>
+
+            <label class="rq-clinic-radio-card {% if mode == 'shared' %}rq-clinic-radio-card--active{% endif %}">
+              <input type="radio" name="queue_mode" value="shared" id="modeShared"
+                     {% if mode == 'shared' %}checked{% endif %}>
+              <div class="rq-clinic-radio-content">
+                <div class="rq-clinic-radio-title">Shared</div>
+                <div class="rq-clinic-radio-desc">All referrals go to the clinic pool. Specialists claim what they want to review.</div>
+              </div>
+            </label>
+
+            <label class="rq-clinic-radio-card {% if mode == 'individual' %}rq-clinic-radio-card--active{% endif %}">
+              <input type="radio" name="queue_mode" value="individual" id="modeIndividual"
+                     {% if mode == 'individual' %}checked{% endif %}>
+              <div class="rq-clinic-radio-content">
+                <div class="rq-clinic-radio-title">Individual</div>
+                <div class="rq-clinic-radio-desc">Referrals assigned directly to the importing specialist. No shared pool.</div>
+              </div>
+            </label>
+
+            <div style="margin-top: var(--rq-space-lg);">
+              <button type="submit" class="btn btn-primary btn-sm">Save Mode</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    {# ── Team ── #}
+    <section class="rq-settings-section" id="section-team" style="display: none;">
+      <h2 class="rq-settings-section-title">Team</h2>
+
+      <div class="rq-settings-team-summary">
+        <span class="rq-settings-team-stat">
+          <strong>{{ members|length }}</strong> active member{{ 's' if members|length != 1 else '' }}
+        </span>
+        {% if pending %}
+        <span class="rq-settings-team-stat">
+          <strong>{{ pending|length }}</strong> pending invite{{ 's' if pending|length != 1 else '' }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="rq-table-wrap" style="margin-top: var(--rq-space-md);">
+        <table class="rq-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in members %}
+            {% if m.user %}
+            <tr>
+              <td>
+                <span class="rq-patient-name">{{ m.user.full_name }}</span>
+                <span class="rq-patient-meta" style="margin-left: var(--rq-space-sm);">{{ m.user.email }}</span>
+              </td>
+              <td><span class="rq-clinic-role-badge">{{ m.role|title }}</span></td>
+              <td><span class="rq-patient-meta rq-tabular">{{ m.joined_at.strftime('%b %d, %Y') if m.joined_at else '—' }}</span></td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: var(--rq-space-lg);">
+        <a href="{{ url_for('clinic.team') }}" class="rq-settings-link">
+          Manage team <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </section>
+
+    {# ── Integrations ── #}
+    <section class="rq-settings-section" id="section-integrations" style="display: none;">
+      <h2 class="rq-settings-section-title">Integrations</h2>
+
+      <div class="rq-clinic-panel">
+        <div class="rq-clinic-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h6 class="rq-label" style="margin: 0;">OceanMD</h6>
+          <span class="rq-settings-status" id="oceanStatus">
+            {% if clinic.ocean_md_api_key %}
+              <span class="rq-status-dot rq-status-dot--connected"></span> Connected
+            {% else %}
+              <span class="rq-status-dot rq-status-dot--disconnected"></span> Not configured
+            {% endif %}
+          </span>
+        </div>
+        <div class="rq-clinic-panel-body">
+          <div class="rq-settings-field">
+            <label class="rq-label" for="oceanApiKey">API Key</label>
+            <input type="password" id="oceanApiKey" class="form-control form-control-sm"
+                   value="{{ clinic.ocean_md_api_key or '' }}" placeholder="Enter OceanMD API key">
+          </div>
+          <div style="margin-top: var(--rq-space-md);">
+            <button type="button" class="btn btn-primary btn-sm" id="saveOceanKey">Save Key</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Privacy & Security ── #}
+    <section class="rq-settings-section" id="section-privacy" style="display: none;">
+      <h2 class="rq-settings-section-title">Privacy &amp; Security</h2>
+
+      <div class="rq-clinic-panel">
+        <div class="rq-clinic-panel-body">
+          <div class="rq-settings-info-block">
+            <h6 class="rq-label">PIPEDA Compliance</h6>
+            <p>ReferralQ is designed to comply with the Personal Information Protection and Electronic Documents Act (PIPEDA). All personal health information is handled in accordance with Canadian federal privacy legislation.</p>
+          </div>
+
+          <div class="rq-settings-info-block">
+            <h6 class="rq-label">BC Data Residency</h6>
+            <p>All patient data is stored within Canadian data centres in compliance with British Columbia health data residency requirements.</p>
+          </div>
+
+          <div class="rq-settings-info-block">
+            <h6 class="rq-label">SOC 2</h6>
+            <p>SOC 2 Type II certification is <strong>in progress</strong>. Target completion: Q3 2026.</p>
+          </div>
+
+          <div class="rq-settings-info-block" style="border-bottom: none; padding-bottom: 0;">
+            <h6 class="rq-label">Security Inquiries</h6>
+            <p>For security questions or to report a vulnerability, contact <a href="mailto:security@referralq.ca">security@referralq.ca</a>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Billing ── #}
+    <section class="rq-settings-section" id="section-billing" style="display: none;">
+      <h2 class="rq-settings-section-title">Billing</h2>
+
+      <div class="rq-clinic-panel">
+        <div class="rq-clinic-panel-body">
+          <div class="rq-settings-billing-plan">
+            <div class="rq-settings-billing-badge">Free Tier</div>
+            <span class="rq-settings-billing-label">Beta</span>
+          </div>
+          <p style="color: var(--rq-text-muted); font-size: 14px; margin-top: var(--rq-space-md);">
+            You are on the free beta plan. All features are available during the beta period.
+          </p>
+          <p style="color: var(--rq-text-muted); font-size: 14px;">
+            Contact <a href="mailto:billing@referralq.ca">billing@referralq.ca</a> for premium plan inquiries.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  /* ── Section switching ── */
+  var navItems = document.querySelectorAll('.rq-settings-nav-item');
+  var sections = document.querySelectorAll('.rq-settings-section');
+
+  function showSection(id) {
+    sections.forEach(function(s) { s.style.display = 'none'; });
+    navItems.forEach(function(n) { n.classList.remove('active'); });
+    var target = document.getElementById('section-' + id);
+    var nav = document.querySelector('[data-section="' + id + '"]');
+    if (target) target.style.display = 'block';
+    if (nav) nav.classList.add('active');
+  }
+
+  navItems.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      var id = this.getAttribute('data-section');
+      window.location.hash = id;
+      showSection(id);
+    });
+  });
+
+  /* Read hash on load */
+  var hash = window.location.hash.replace('#', '');
+  var validSections = ['general', 'queue', 'team', 'integrations', 'privacy', 'billing'];
+  if (hash && validSections.indexOf(hash) !== -1) {
+    showSection(hash);
+  } else {
+    showSection('general');
+  }
+
+  /* Listen for hash changes (back/forward) */
+  window.addEventListener('hashchange', function() {
+    var h = window.location.hash.replace('#', '');
+    if (h && validSections.indexOf(h) !== -1) showSection(h);
+  });
+
+  /* ── OceanMD key save ── */
+  var saveBtn = document.getElementById('saveOceanKey');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      var key = document.getElementById('oceanApiKey').value.trim();
+      var csrfToken = document.querySelector('input[name="csrf_token"]').value;
+      fetch('{{ url_for("clinic.save_ocean_key") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ api_key: key })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+          var status = document.getElementById('oceanStatus');
+          if (key) {
+            status.innerHTML = '<span class="rq-status-dot rq-status-dot--connected"></span> Connected';
+          } else {
+            status.innerHTML = '<span class="rq-status-dot rq-status-dot--disconnected"></span> Not configured';
+          }
+          /* Flash-style feedback */
+          saveBtn.textContent = 'Saved';
+          saveBtn.disabled = true;
+          setTimeout(function() { saveBtn.textContent = 'Save Key'; saveBtn.disabled = false; }, 1500);
+        }
+      });
+    });
+  }
+})();
+</script>
 {% endblock %}

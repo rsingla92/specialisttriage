@@ -2,7 +2,9 @@
 {% block title %}{{ label }} Pathway – ReferralQ{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 700px;">
+<div class="container" style="max-width: 760px;">
+
+  <!-- Breadcrumb -->
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{ url_for('pathways.index') }}">Pathways</a></li>
@@ -11,21 +13,29 @@
     </ol>
   </nav>
 
-  <h1 class="h3 fw-bold mb-1">{{ label }}</h1>
-  <p class="text-muted mb-4">Before referring, please complete these steps.
-    {% if source %}<br><i class="bi bi-book me-1"></i>{{ source }}{% endif %}
-  </p>
+  <!-- Page header -->
+  <div class="rq-pathway-detail-header">
+    <h1>{{ label }}</h1>
+    <p class="rq-pathway-subtitle" style="margin-bottom: 0;">
+      Before referring, please complete these steps.
+      {% if source %}<br><span class="rq-caption" style="color: var(--rq-text-muted);"><i class="bi bi-book"></i> {{ source }}</span>{% endif %}
+    </p>
+  </div>
 
   {# Step 1: Required workup #}
   {% if workup_items %}
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-      <h5 class="mb-0"><i class="bi bi-1-circle me-2"></i>Required Workup</h5>
+  <div class="rq-pathway-section">
+    <div class="rq-pathway-section-header">
+      <span class="rq-pathway-step-num">1</span>
+      <div>
+        <div class="rq-label" style="margin-bottom: 2px;">Step 1</div>
+        <h5 class="rq-pathway-section-title">Required Workup</h5>
+      </div>
     </div>
-    <div class="card-body">
-      <p class="small text-muted mb-3">Complete before considering referral:</p>
+    <div class="rq-pathway-section-body">
+      <p class="rq-caption" style="color: var(--rq-text-muted); margin-bottom: var(--rq-space-md);">Complete before considering referral:</p>
       {% for wi in workup_items %}
-      <div class="form-check mb-2">
+      <div class="rq-pathway-check-item">
         <input class="form-check-input" type="checkbox" id="workup-{{ loop.index }}">
         <label class="form-check-label" for="workup-{{ loop.index }}">
           {{ wi.label }}
@@ -38,14 +48,18 @@
 
   {# Step 2: Consider before referring #}
   {% if consider_before %}
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning bg-opacity-25">
-      <h5 class="mb-0"><i class="bi bi-2-circle me-2"></i>Consider Before Referring</h5>
+  <div class="rq-pathway-section rq-pathway-section--warning">
+    <div class="rq-pathway-section-header">
+      <span class="rq-pathway-step-num rq-pathway-step-num--warning">2</span>
+      <div>
+        <div class="rq-label" style="margin-bottom: 2px;">Step 2</div>
+        <h5 class="rq-pathway-section-title">Consider Before Referring</h5>
+      </div>
     </div>
-    <div class="card-body">
-      <p class="small text-muted mb-3">These may resolve without specialist assessment:</p>
+    <div class="rq-pathway-section-body">
+      <p class="rq-caption" style="color: var(--rq-text-muted); margin-bottom: var(--rq-space-md);">These may resolve without specialist assessment:</p>
       {% for item in consider_before %}
-      <div class="form-check mb-2">
+      <div class="rq-pathway-check-item">
         <input class="form-check-input" type="checkbox" id="consider-{{ loop.index }}">
         <label class="form-check-label" for="consider-{{ loop.index }}">
           {{ item }}
@@ -58,18 +72,23 @@
 
   {# Step 3: Referral recommended if #}
   {% if refer_if %}
-  <div class="card shadow-sm mb-4 border-success">
-    <div class="card-body">
-      <h5 class="fw-bold text-success"><i class="bi bi-check-circle me-2"></i>Referral Recommended If:</h5>
-      <p class="mb-0">{{ refer_if }}</p>
+  <div class="rq-pathway-section rq-pathway-section--success">
+    <div class="rq-pathway-section-header">
+      <span class="rq-pathway-step-num rq-pathway-step-num--success"><i class="bi bi-check2"></i></span>
+      <div>
+        <div class="rq-label" style="margin-bottom: 2px;">Outcome</div>
+        <h5 class="rq-pathway-section-title">Referral Recommended If</h5>
+      </div>
+    </div>
+    <div class="rq-pathway-section-body">
+      <p style="margin: 0; font-size: 14px; line-height: 1.6;">{{ refer_if }}</p>
     </div>
   </div>
   {% endif %}
 
-  <div class="text-center mt-4">
-    <p class="text-muted small">
-      <a href="{{ url_for('pathways.index') }}">Back to all pathways</a>
-    </p>
+  <div class="rq-pathway-back-link">
+    <a href="{{ url_for('pathways.index') }}"><i class="bi bi-arrow-left"></i> Back to all pathways</a>
   </div>
+
 </div>
 {% endblock %}

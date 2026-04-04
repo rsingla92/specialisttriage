@@ -53,13 +53,13 @@ def specialist(app):
         clinic_name="Fix Clinic",
         role="specialist",
     )
-    user.set_password("testpassword")
+    user.set_password("TestPass1!")
     db.session.add(user)
     db.session.commit()
     return user.id
 
 
-def _login(client, email, password="testpassword"):
+def _login(client, email, password="TestPass1!"):
     return client.post(
         "/login",
         data={"email": email, "password": password},
@@ -234,10 +234,10 @@ class TestBatchClinicPoolAccess:
             clinic_name="Admin Clinic",
             role="admin",
         )
-        admin.set_password("adminpass")
+        admin.set_password("AdminPass1!")
         db.session.add(admin)
         db.session.commit()
-        _login(client, admin.email, "adminpass")
+        _login(client, admin.email, "AdminPass1!")
 
         # Referral belonging to a completely different specialist
         other = User(
@@ -247,7 +247,7 @@ class TestBatchClinicPoolAccess:
             clinic_name="Other Clinic",
             role="specialist",
         )
-        other.set_password("otherpass")
+        other.set_password("OtherPass1!")
         db.session.add(other)
         db.session.flush()
         ref = _make_referral(specialist_id=other.id)

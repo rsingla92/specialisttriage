@@ -41,9 +41,14 @@ def team():
 @login_required
 @clinic_admin_required
 def settings():
-    """Clinic settings page."""
+    """Clinic settings hub."""
     clinic = current_user.primary_clinic
-    return render_template("clinic/settings.html", clinic=clinic)
+    members = ClinicMembership.query.filter_by(clinic_id=clinic.id, is_active=True).all()
+    pending = ClinicMembership.query.filter_by(
+        clinic_id=clinic.id,
+    ).filter(ClinicMembership.invite_token.isnot(None)).all()
+    return render_template("clinic/settings.html", clinic=clinic, members=members,
+                           pending=pending)
 
 
 @clinic_bp.route("/settings", methods=["POST"])
@@ -60,6 +65,22 @@ def update_settings():
         db.session.commit()
         flash("Settings updated.", "success")
     return redirect(url_for("clinic.settings"))
+
+
+@clinic_bp.route("/settings/general", methods=["POST"])
+@login_required
+@clinic_admin_required
+def update_general():
+    """Update general clinic information (name, address)."""
+    clinic = current_user.primary_clinic
+    name = request.form.get("clinic_name", "").strip()
+    address = request.form.get("clinic_address", "").strip()
+    if name:
+        clinic.name = name
+    clinic.address = address or None
+    db.session.commit()
+    flash("General settings updated.", "success")
+    return redirect(url_for("clinic.settings") + "#general")
 
 
 @clinic_bp.route("/invite", methods=["POST"])

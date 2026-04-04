@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 44" fill="none">
+  <!-- ReferralQ wordmark — Plus Jakarta Sans style geometric lettering -->
+  <text x="0" y="34" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="36" font-weight="700" letter-spacing="-0.5" fill="#212529">Referral</text>
+  <!-- Stylized Q with teal triage arrow tail -->
+  <g transform="translate(185, 0)">
+    <!-- Q letter body -->
+    <text x="0" y="34" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="36" font-weight="700" fill="#1B6B93">Q</text>
+    <!-- Arrow tail extending from Q's descender — triage flow motif -->
+    <path d="M 28 32 L 40 40 L 36 36 L 48 36" stroke="#1B6B93" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="48,33 54,36 48,39" fill="#1B6B93"/>
+  </g>
+</svg>

@@ -2,83 +2,92 @@
 {% block title %}Welcome — ReferralQ{% endblock %}
 
 {% block content %}
-<div class="container py-4" style="max-width: 640px;">
-  <h2 class="fw-bold mb-1" style="color: #1B6B93;">
-    Welcome to {{ clinic.name }}
-  </h2>
-  <p class="text-muted mb-4">Let's get your clinic set up. You can skip any step and come back later.</p>
+<div class="container py-4">
+  <div class="rq-onboarding">
+    <h2 class="fw-bold mb-1">Welcome to {{ clinic.name }}</h2>
+    <p class="rq-hero-sub mb-4" style="font-size: 14px;">Let's get your clinic set up. You can skip any step and come back later.</p>
 
-  <!-- Step indicators -->
-  <div class="d-flex gap-2 mb-4">
-    <span class="badge rounded-pill bg-primary step-badge" id="badge-1" style="background-color: #1B6B93 !important;">1. Invite Team</span>
-    <span class="badge rounded-pill bg-secondary step-badge" id="badge-2">2. Connect OceanMD</span>
-    <span class="badge rounded-pill bg-secondary step-badge" id="badge-3">3. Import Referrals</span>
-  </div>
+    {# Step indicators #}
+    <div class="rq-step-indicators">
+      <span class="rq-step-tag active" id="badge-1">01 Invite Team</span>
+      <span class="rq-step-tag" id="badge-2">02 OceanMD</span>
+      <span class="rq-step-tag" id="badge-3">03 Import</span>
+    </div>
 
-  <!-- Step 1: Invite team -->
-  <div id="step-1" class="card shadow-sm mb-3">
-    <div class="card-body p-4">
-      <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Invite your team</h5>
-      <p class="text-muted small">Enter email addresses (comma-separated) to generate invite links.</p>
+    {# Step 1: Invite team #}
+    <div id="step-1" class="rq-step-card">
+      <h5><i class="bi bi-people me-2"></i>Invite your team</h5>
+      <p>Enter email addresses (comma-separated) to generate invite links.</p>
       <div class="mb-3">
         <textarea class="form-control" id="invite-emails" rows="3"
                   placeholder="colleague@clinic.ca, another@clinic.ca"></textarea>
       </div>
-      <button class="btn btn-primary btn-sm" id="btn-generate-invites"
-              style="background-color: #1B6B93; border-color: #1B6B93;">
+      <button class="btn btn-primary btn-sm" id="btn-generate-invites">
         <i class="bi bi-link-45deg me-1"></i>Generate Invite Links
       </button>
       <div id="invite-results" class="mt-3" style="display: none;">
         <label class="form-label fw-bold small">Share these links with your team:</label>
         <div id="invite-links"></div>
       </div>
-      <div class="mt-3 text-end">
+      <div class="mt-4 text-end">
         <button class="btn btn-outline-secondary btn-sm" onclick="showStep(2)">
           Next <i class="bi bi-arrow-right ms-1"></i>
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Step 2: Connect OceanMD -->
-  <div id="step-2" class="card shadow-sm mb-3" style="display: none;">
-    <div class="card-body p-4">
-      <h5 class="fw-bold mb-3"><i class="bi bi-cloud-check me-2"></i>Connect OceanMD</h5>
-      <p class="text-muted small">Enter your OceanMD API key to enable referral imports. You can skip this for now.</p>
+    {# Step 2: Connect OceanMD #}
+    <div id="step-2" class="rq-step-card" style="display: none;">
+      <h5><i class="bi bi-cloud-check me-2"></i>Connect OceanMD</h5>
+      <p>Enter your OceanMD API key to enable referral imports. You can skip this for now.</p>
+
+      <div class="rq-ocean-guide mb-3" style="background: var(--rq-primary-06); border: 1px solid var(--rq-primary-12); border-radius: var(--rq-radius-md); padding: var(--rq-space-md);">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: var(--rq-space-sm); color: var(--rq-text);">How to get your API key:</div>
+        <ol style="font-size: 13px; color: var(--rq-text-secondary); padding-left: 20px; margin-bottom: var(--rq-space-sm);">
+          <li style="margin-bottom: var(--rq-space-xs);">Log in to your OceanMD account at <a href="https://ocean.cognisantmd.com" target="_blank" rel="noopener noreferrer">ocean.cognisantmd.com</a></li>
+          <li style="margin-bottom: var(--rq-space-xs);">Navigate to <strong>Admin &gt; eReferral Settings &gt; API</strong></li>
+          <li style="margin-bottom: var(--rq-space-xs);">Click <strong>Generate New API Key</strong></li>
+          <li>Copy the key and paste it below</li>
+        </ol>
+        <a href="https://support.cognisantmd.com/hc/en-us/categories/360001040871-Ocean-eReferral" target="_blank" rel="noopener noreferrer" style="font-size: 12px; font-weight: 500;">
+          <i class="bi bi-box-arrow-up-right me-1"></i>OceanMD support docs
+        </a>
+      </div>
+
       <div class="mb-3">
         <input type="text" class="form-control" id="ocean-api-key" placeholder="Your OceanMD API key">
       </div>
-      <button class="btn btn-primary btn-sm" id="btn-save-ocean"
-              style="background-color: #1B6B93; border-color: #1B6B93;">
+
+      <div style="font-size: 12px; color: var(--rq-text-muted); margin-bottom: var(--rq-space-md);">
+        <i class="bi bi-info-circle me-1"></i>The API key allows ReferralQ to securely pull your pending referrals from OceanMD.
+      </div>
+
+      <button class="btn btn-primary btn-sm" id="btn-save-ocean">
         <i class="bi bi-check-lg me-1"></i>Save API Key
       </button>
       <span id="ocean-status" class="ms-2 small"></span>
-      <div class="mt-3 text-end">
+      <div class="mt-4 text-end">
         <button class="btn btn-outline-secondary btn-sm" onclick="showStep(3)">
           Next <i class="bi bi-arrow-right ms-1"></i>
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Step 3: Import referrals -->
-  <div id="step-3" class="card shadow-sm mb-3" style="display: none;">
-    <div class="card-body p-4">
-      <h5 class="fw-bold mb-3"><i class="bi bi-cloud-download me-2"></i>Import referrals</h5>
-      <p class="text-muted small">Pull in your existing referrals from OceanMD, or skip for now.</p>
+    {# Step 3: Import referrals #}
+    <div id="step-3" class="rq-step-card" style="display: none;">
+      <h5><i class="bi bi-cloud-download me-2"></i>Import referrals</h5>
+      <p>Pull in your existing referrals from OceanMD, or skip for now.</p>
       <form action="{{ url_for('referrals.import_referrals') }}" method="post" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-primary btn-sm"
-                style="background-color: #1B6B93; border-color: #1B6B93;">
+        <button type="submit" class="btn btn-primary btn-sm">
           <i class="bi bi-cloud-download-fill me-1"></i>Import from OceanMD
         </button>
       </form>
-      <div class="mt-4 text-center">
-        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg"
-           style="background-color: #1B6B93; border-color: #1B6B93;">
+      <div class="mt-4 text-center pt-3" style="border-top: 1px solid var(--rq-divider);">
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg">
           Go to Dashboard <i class="bi bi-arrow-right ms-1"></i>
         </a>
-        <p class="text-muted small mt-2">You can always import referrals later from the dashboard.</p>
+        <p class="rq-auth-note mt-2">You can always import referrals later from the dashboard.</p>
       </div>
     </div>
   </div>
@@ -92,13 +101,9 @@ function showStep(n) {
     document.getElementById('step-' + i).style.display = i === n ? 'block' : 'none';
     const badge = document.getElementById('badge-' + i);
     if (i === n) {
-      badge.classList.remove('bg-secondary');
-      badge.classList.add('bg-primary');
-      badge.style.backgroundColor = '#1B6B93';
+      badge.classList.add('active');
     } else {
-      badge.classList.remove('bg-primary');
-      badge.classList.add('bg-secondary');
-      badge.style.backgroundColor = '';
+      badge.classList.remove('active');
     }
   }
 }

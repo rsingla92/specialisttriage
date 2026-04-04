@@ -2,14 +2,16 @@
 {% block title %}Clinical Rules – {{ specialty.name }} – ReferralQ{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+{# Page header #}
+<div class="rq-page-header">
   <div>
-    <h1 class="h3 mb-0 fw-bold">Clinical Rules</h1>
-    <p class="text-muted mb-0">{{ specialty.name }}
+    <h1>Clinical Rules</h1>
+    <div class="rq-page-context">
+      {{ specialty.name }}
       {% if specialty.description and 'DRAFT' in specialty.description %}
-        <span class="badge bg-warning text-dark ms-1">DRAFT</span>
+        <span class="badge" style="background: rgba(212, 147, 13, 0.15); color: var(--rq-warning); border: 1px solid rgba(212, 147, 13, 0.4); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">Draft</span>
       {% endif %}
-    </p>
+    </div>
   </div>
   <div class="d-flex gap-2">
     <a href="{{ url_for('admin.export_rules') }}" class="btn btn-sm btn-outline-secondary">
@@ -22,18 +24,24 @@
 </div>
 
 {# Categories grid #}
+<div class="rq-label" style="margin-bottom: var(--rq-space-md);">Categories</div>
 <div class="row g-3 mb-4">
   {% for cat in categories %}
   <div class="col-md-6 col-lg-4">
-    <a href="{{ url_for('admin.category_edit', slug=cat.slug) }}" class="card text-decoration-none h-100 shadow-sm">
-      <div class="card-body">
-        <h5 class="fw-bold text-dark mb-1">{{ cat.display_name }}</h5>
-        <div class="text-muted small">
-          {{ cat.keywords|length }} keywords,
-          {{ cat.workup_items|length }} workup items
+    <a href="{{ url_for('admin.category_edit', slug=cat.slug) }}" class="rq-admin-cat-card text-decoration-none d-block h-100">
+      <div class="rq-admin-cat-card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h5 style="font-size: 15px; font-weight: 600; color: var(--rq-text); margin: 0;">{{ cat.display_name }}</h5>
+          <i class="bi bi-chevron-right" style="font-size: 12px; color: var(--rq-text-muted);"></i>
+        </div>
+        <div class="d-flex gap-3" style="font-size: 12px; color: var(--rq-text-muted); font-variant-numeric: tabular-nums;">
+          <span><strong style="color: var(--rq-text-secondary);">{{ cat.keywords|length }}</strong> keywords</span>
+          <span><strong style="color: var(--rq-text-secondary);">{{ cat.workup_items|length }}</strong> workup items</span>
         </div>
         {% if cat.guidance and cat.guidance.source %}
-          <div class="text-muted small mt-1"><i class="bi bi-book me-1"></i>{{ cat.guidance.source }}</div>
+          <div style="font-size: 12px; color: var(--rq-text-muted); margin-top: var(--rq-space-sm); border-top: 1px solid var(--rq-divider); padding-top: var(--rq-space-sm);">
+            <i class="bi bi-book me-1"></i>{{ cat.guidance.source }}
+          </div>
         {% endif %}
       </div>
     </a>
@@ -42,18 +50,19 @@
 </div>
 
 {# Add category form #}
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-white"><h6 class="mb-0">Add Category</h6></div>
-  <div class="card-body">
-    <form action="{{ url_for('admin.create_category') }}" method="post" class="row g-2">
+<div class="rq-label" style="margin-bottom: var(--rq-space-md);">Add Category</div>
+<div class="rq-admin-panel">
+  <div class="rq-admin-panel-body">
+    <form action="{{ url_for('admin.create_category') }}" method="post" class="row g-2 align-items-end">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="col-md-5">
-        <input type="text" name="display_name" class="form-control form-control-sm" placeholder="Display Name (e.g. Hematuria)" required>
+      <div class="col-md-8">
+        <label class="form-label">Display Name</label>
+        <input type="text" name="display_name" id="categoryDisplayName" class="form-control form-control-sm" placeholder="e.g. Hematuria" required>
+        <div class="rq-slug-preview" id="slugPreview" style="display: none;">
+          Slug: <code id="slugPreviewValue"></code>
+        </div>
       </div>
       <div class="col-md-4">
-        <input type="text" name="slug" class="form-control form-control-sm" placeholder="slug (e.g. hematuria)" required>
-      </div>
-      <div class="col-md-3">
         <button type="submit" class="btn btn-sm btn-primary w-100">Add Category</button>
       </div>
     </form>
@@ -66,16 +75,41 @@
     <div class="modal-content">
       <form action="{{ url_for('admin.import_rules') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="modal-header"><h5 class="modal-title">Import Rules (JSON)</h5></div>
+        <div class="modal-header">
+          <h5 class="modal-title" style="font-size: 16px; font-weight: 600;">Import Rules</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
         <div class="modal-body">
-          <textarea name="json_data" class="form-control" rows="10" placeholder='Paste JSON here...'></textarea>
+          <label class="rq-label" style="margin-bottom: var(--rq-space-sm); display: block;">JSON Data</label>
+          <textarea name="json_data" class="form-control" rows="10" placeholder='Paste JSON here...' style="font-family: var(--rq-mono); font-size: 13px;"></textarea>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Import</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary">Import</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var nameInput = document.getElementById('categoryDisplayName');
+  var preview = document.getElementById('slugPreview');
+  var previewValue = document.getElementById('slugPreviewValue');
+  if (!nameInput) return;
+  nameInput.addEventListener('input', function() {
+    var val = this.value.toLowerCase().replace(/[^a-z0-9 _\-]/g, '').trim().replace(/[\s\-]+/g, '_');
+    if (val) {
+      previewValue.textContent = val;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  });
+})();
+</script>
 {% endblock %}

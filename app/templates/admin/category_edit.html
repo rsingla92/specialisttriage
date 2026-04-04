@@ -2,6 +2,7 @@
 {% block title %}{{ category.display_name }} – Rules – ReferralQ{% endblock %}
 
 {% block content %}
+{# Breadcrumb #}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{{ url_for('admin.rules_list') }}">Clinical Rules</a></li>
@@ -9,24 +10,33 @@
   </ol>
 </nav>
 
-<h1 class="h3 fw-bold mb-4">{{ category.display_name }}</h1>
+{# Page header #}
+<div class="rq-page-header">
+  <div>
+    <h1>{{ category.display_name }}</h1>
+    <div class="rq-page-context">Rule configuration</div>
+  </div>
+</div>
 
 <div class="row">
   <div class="col-md-6">
     {# Classification Keywords #}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white"><h6 class="mb-0">Classification Keywords</h6></div>
-      <div class="card-body">
+    <div class="rq-admin-panel mb-4">
+      <div class="rq-admin-panel-header">
+        <span class="rq-label" style="margin: 0;">Classification Keywords</span>
+        <span class="rq-admin-count">{{ category.keywords|length }}</span>
+      </div>
+      <div class="rq-admin-panel-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
           {% for ck in category.keywords %}
           <form action="{{ url_for('admin.update_keywords', slug=category.slug) }}" method="post" class="d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="keyword_id" value="{{ ck.id }}">
-            <span class="badge bg-light text-dark border">
+            <span class="rq-admin-keyword-tag">
               {{ ck.keyword }}
-              {% if ck.use_word_boundary %}<i class="bi bi-braces small text-muted" title="word-boundary match"></i>{% endif %}
-              <button type="submit" class="btn-close btn-close-white ms-1" style="font-size:0.5rem; filter:invert(0.5);" title="Remove"></button>
+              {% if ck.use_word_boundary %}<i class="bi bi-braces" style="font-size: 10px; color: var(--rq-text-muted); margin-left: 2px;" title="word-boundary match"></i>{% endif %}
+              <button type="submit" class="rq-admin-keyword-remove" title="Remove">&times;</button>
             </span>
           </form>
           {% endfor %}
@@ -35,20 +45,23 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="add">
           <input type="text" name="keyword" class="form-control form-control-sm" placeholder="Add keyword...">
-          <button type="submit" class="btn btn-sm btn-outline-primary">Add</button>
+          <button type="submit" class="btn btn-sm btn-outline-primary" style="white-space: nowrap;">Add</button>
         </form>
       </div>
     </div>
 
     {# Workup Items #}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white"><h6 class="mb-0">Required Workup Items</h6></div>
-      <div class="card-body">
+    <div class="rq-admin-panel mb-4">
+      <div class="rq-admin-panel-header">
+        <span class="rq-label" style="margin: 0;">Required Workup Items</span>
+        <span class="rq-admin-count">{{ category.workup_items|length }}</span>
+      </div>
+      <div class="rq-admin-panel-body" style="padding: 0;">
         {% for wi in category.workup_items %}
-        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-          <div>
-            <strong>{{ wi.label }}</strong>
-            <div class="text-muted small">
+        <div class="rq-admin-workup-row">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 14px; font-weight: 600; color: var(--rq-text);">{{ wi.label }}</div>
+            <div style="font-size: 12px; color: var(--rq-text-muted); margin-top: 2px;">
               Detection: {{ wi.detection_keywords|map(attribute='keyword')|join(', ') }}
             </div>
           </div>
@@ -56,47 +69,55 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="item_id" value="{{ wi.id }}">
-            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            <button type="submit" class="btn btn-sm btn-ghost" style="color: var(--rq-error);"><i class="bi bi-trash"></i></button>
           </form>
         </div>
         {% endfor %}
 
-        <form action="{{ url_for('admin.update_workup', slug=category.slug) }}" method="post" class="mt-3">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="action" value="add">
-          <div class="mb-2">
-            <input type="text" name="label" class="form-control form-control-sm" placeholder="Workup item label (e.g. Urinalysis)" required>
-          </div>
-          <div class="mb-2">
-            <input type="text" name="keywords" class="form-control form-control-sm" placeholder="Detection keywords, comma-separated (e.g. urinalysis, ua, urine dip)">
-          </div>
-          <button type="submit" class="btn btn-sm btn-outline-primary">Add Workup Item</button>
-        </form>
+        <div style="padding: var(--rq-space-md) var(--rq-space-lg); border-top: 1px solid var(--rq-divider);">
+          <form action="{{ url_for('admin.update_workup', slug=category.slug) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add">
+            <div class="mb-2">
+              <label class="form-label">Item Label</label>
+              <input type="text" name="label" class="form-control form-control-sm" placeholder="e.g. Urinalysis" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Detection Keywords</label>
+              <input type="text" name="keywords" class="form-control form-control-sm" placeholder="Comma-separated, e.g. urinalysis, ua, urine dip">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Add Workup Item</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="col-md-6">
     {# Pathway Guidance #}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white"><h6 class="mb-0">Pathway Guidance</h6></div>
-      <div class="card-body">
+    <div class="rq-admin-panel mb-4">
+      <div class="rq-admin-panel-header">
+        <span class="rq-label" style="margin: 0;">Pathway Guidance</span>
+      </div>
+      <div class="rq-admin-panel-body">
         <form action="{{ url_for('admin.update_guidance', slug=category.slug) }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
-            <label class="form-label fw-bold small">Consider Before Referring</label>
+            <label class="form-label">Consider Before Referring</label>
             <textarea name="consider_before" class="form-control form-control-sm" rows="6" placeholder="One item per line...">{% if category.guidance and category.guidance.consider_before %}{% for item in category.guidance.consider_before %}{{ item }}
 {% endfor %}{% endif %}</textarea>
             <div class="form-text">One item per line. These appear as checklist items on the pathway page.</div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold small">Referral Recommended If</label>
+            <label class="form-label">Referral Recommended If</label>
             <textarea name="refer_if" class="form-control form-control-sm" rows="4">{{ category.guidance.refer_if if category.guidance else '' }}</textarea>
           </div>
           <button type="submit" class="btn btn-sm btn-primary">Save Guidance</button>
         </form>
         {% if category.guidance and category.guidance.source %}
-          <div class="text-muted small mt-2"><i class="bi bi-book me-1"></i>Source: {{ category.guidance.source }}</div>
+          <div style="margin-top: var(--rq-space-md); padding-top: var(--rq-space-md); border-top: 1px solid var(--rq-divider); font-size: 12px; color: var(--rq-text-muted);">
+            <i class="bi bi-book me-1"></i>Source: {{ category.guidance.source }}
+          </div>
         {% endif %}
       </div>
     </div>

@@ -2,7 +2,7 @@
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from app import db
 from app.models import Referral, TriageResult
 
@@ -12,6 +12,38 @@ analytics_bp = Blueprint("analytics", __name__)
 def _date_cutoff(days):
     """Return UTC datetime for N days ago."""
     return datetime.now(timezone.utc) - timedelta(days=days)
+
+
+def _get_date_filter(query_args, date_column):
+    """Return a SQLAlchemy filter clause based on query parameters.
+
+    Supports two modes:
+    - start_date + end_date (ISO format strings): absolute date range
+    - days (int): relative N-days-ago cutoff (0 = all time)
+
+    Returns a filter clause or True (no filter).
+    """
+    start_str = query_args.get("start_date", type=str)
+    end_str = query_args.get("end_date", type=str)
+
+    if start_str and end_str:
+        try:
+            start_dt = datetime.fromisoformat(start_str).replace(tzinfo=timezone.utc)
+            end_dt = datetime.fromisoformat(end_str).replace(
+                hour=23, minute=59, second=59, tzinfo=timezone.utc
+            )
+        except (ValueError, TypeError):
+            # Fall through to days-based logic on invalid dates
+            pass
+        else:
+            if start_dt < end_dt:
+                return and_(date_column >= start_dt, date_column <= end_dt)
+
+    days = query_args.get("days", 30, type=int)
+    if days > 0:
+        cutoff = _date_cutoff(days)
+        return date_column >= cutoff
+    return True
 
 
 def _base_query():
@@ -28,8 +60,7 @@ def index():
 @analytics_bp.route("/api/analytics/volume")
 @login_required
 def volume():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.received_at)
 
     rows = (
         db.session.query(
@@ -37,7 +68,7 @@ def volume():
             func.count(Referral.id),
         )
         .filter(Referral.specialist_id == current_user.id)
-        .filter(Referral.received_at >= cutoff if cutoff else True)
+        .filter(date_filter)
         .group_by(func.date(Referral.received_at))
         .order_by(func.date(Referral.received_at))
         .all()
@@ -48,16 +79,12 @@ def volume():
 @analytics_bp.route("/api/analytics/categories")
 @login_required
 def categories():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.received_at)
 
     q = db.session.query(
         func.coalesce(Referral.clinical_category, "other"),
         func.count(Referral.id),
-    ).filter(Referral.specialist_id == current_user.id)
-
-    if cutoff:
-        q = q.filter(Referral.received_at >= cutoff)
+    ).filter(Referral.specialist_id == current_user.id).filter(date_filter)
 
     rows = q.group_by(Referral.clinical_category).all()
     return jsonify({"data": [{"category": cat, "count": c} for cat, c in rows]})
@@ -66,8 +93,7 @@ def categories():
 @analytics_bp.route("/api/analytics/completeness")
 @login_required
 def completeness():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, TriageResult.triaged_at)
 
     q = (
         db.session.query(
@@ -76,9 +102,8 @@ def completeness():
         )
         .join(Referral, TriageResult.referral_id == Referral.id)
         .filter(Referral.specialist_id == current_user.id)
+        .filter(date_filter)
     )
-    if cutoff:
-        q = q.filter(TriageResult.triaged_at >= cutoff)
 
     rows = (
         q.group_by(func.date(TriageResult.triaged_at))
@@ -91,8 +116,7 @@ def completeness():
 @analytics_bp.route("/api/analytics/turnaround")
 @login_required
 def turnaround():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.resolved_at)
 
     q = db.session.query(
         func.date(Referral.resolved_at),
@@ -102,9 +126,7 @@ def turnaround():
     ).filter(
         Referral.specialist_id == current_user.id,
         Referral.resolved_at.isnot(None),
-    )
-    if cutoff:
-        q = q.filter(Referral.resolved_at >= cutoff)
+    ).filter(date_filter)
 
     rows = (
         q.group_by(func.date(Referral.resolved_at))
@@ -117,8 +139,7 @@ def turnaround():
 @analytics_bp.route("/api/analytics/outcomes")
 @login_required
 def outcomes():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.resolved_at)
 
     q = db.session.query(
         Referral.status,
@@ -126,9 +147,7 @@ def outcomes():
     ).filter(
         Referral.specialist_id == current_user.id,
         Referral.status.in_(("accepted", "declined", "needs_info", "redirected")),
-    )
-    if cutoff:
-        q = q.filter(Referral.resolved_at >= cutoff)
+    ).filter(date_filter)
 
     rows = q.group_by(Referral.status).all()
     return jsonify({"data": [{"status": s, "count": c} for s, c in rows]})
@@ -137,8 +156,7 @@ def outcomes():
 @analytics_bp.route("/api/analytics/referring-physicians")
 @login_required
 def referring_physicians():
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.received_at)
 
     q = (
         db.session.query(
@@ -148,9 +166,8 @@ def referring_physicians():
         )
         .outerjoin(TriageResult, TriageResult.referral_id == Referral.id)
         .filter(Referral.specialist_id == current_user.id)
+        .filter(date_filter)
     )
-    if cutoff:
-        q = q.filter(Referral.received_at >= cutoff)
 
     rows = (
         q.group_by(Referral.referring_physician_name)
@@ -168,12 +185,9 @@ def referring_physicians():
 @login_required
 def summary():
     """Summary stats for the analytics header cards."""
-    days = request.args.get("days", 30, type=int)
-    cutoff = _date_cutoff(days) if days > 0 else None
+    date_filter = _get_date_filter(request.args, Referral.received_at)
 
-    base = _base_query()
-    if cutoff:
-        base = base.filter(Referral.received_at >= cutoff)
+    base = _base_query().filter(date_filter)
 
     total = base.count()
 
@@ -181,11 +195,10 @@ def summary():
         db.session.query(func.avg(TriageResult.completeness_score))
         .join(Referral, TriageResult.referral_id == Referral.id)
         .filter(Referral.specialist_id == current_user.id)
-        .filter(Referral.received_at >= cutoff if cutoff else True)
+        .filter(_get_date_filter(request.args, Referral.received_at))
         .scalar()
     )
 
-    resolved = base.filter(Referral.resolved_at.isnot(None))
     avg_turnaround = (
         db.session.query(
             func.avg(
@@ -193,7 +206,7 @@ def summary():
             )
         )
         .filter(Referral.specialist_id == current_user.id, Referral.resolved_at.isnot(None))
-        .filter(Referral.received_at >= cutoff if cutoff else True)
+        .filter(_get_date_filter(request.args, Referral.received_at))
         .scalar()
     )
 

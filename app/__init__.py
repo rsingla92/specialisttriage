@@ -18,6 +18,10 @@ def create_app(config_name="default"):
     cfg = config[config_name]
     app.config.from_object(cfg)
 
+    # Run config-specific initialization (e.g., production SSL enforcement)
+    if hasattr(cfg, "init_app"):
+        cfg.init_app(app)
+
     # Fail fast in production if the insecure dev default secret key is used.
     from config import _DEV_SECRET_KEY
     if config_name == "production" and app.config.get("SECRET_KEY") == _DEV_SECRET_KEY:
@@ -30,6 +34,11 @@ def create_app(config_name="default"):
     login_manager.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+
+    # Serve static files efficiently in production
+    if config_name == "production":
+        from whitenoise import WhiteNoise
+        app.wsgi_app = WhiteNoise(app.wsgi_app, root=app.static_folder, prefix="static/")
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to access the specialist triage portal."

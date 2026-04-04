@@ -29,7 +29,7 @@ def specialist(app):
         clinic_name="Test Clinic",
         role="specialist",
     )
-    user.set_password("testpassword")
+    user.set_password("TestPass1!")
     db.session.add(user)
     db.session.commit()
     return user.id
@@ -45,7 +45,7 @@ def login(client, email, password):
 
 def login_specialist(client, app, specialist_id):
     user = db.session.get(User, specialist_id)
-    return login(client, user.email, "testpassword")
+    return login(client, user.email, "TestPass1!")
 
 
 class TestAuth:
@@ -79,8 +79,8 @@ class TestAuth:
             data={
                 "full_name": "Dr. New User",
                 "email": "new.user@bc.ca",
-                "password": "securepass1",
-                "confirm_password": "securepass1",
+                "password": "SecurePass1!",
+                "confirm_password": "SecurePass1!",
                 "specialty": "Urology",
                 "clinic_name": "Test Hospital",
             },
@@ -356,7 +356,7 @@ class TestBatchActions:
         # Create another user's referral
         other = User(email="other@bc.ca", full_name="Other", specialty="Urology",
                      clinic_name="Other", role="specialist")
-        other.set_password("testpassword")
+        other.set_password("TestPass1!")
         db.session.add(other)
         db.session.flush()
         from datetime import date
@@ -620,8 +620,8 @@ class TestSignup:
             "specialty_id": str(spec.id),
             "full_name": "Dr. Test",
             "email": "test@signup.com",
-            "password": "testpass123",
-            "confirm_password": "testpass123",
+            "password": "TestPass1!",
+            "confirm_password": "TestPass1!",
         }, follow_redirects=True)
         assert resp.status_code == 200
         assert Clinic.query.filter_by(slug="test-urology-clinic").first() is not None

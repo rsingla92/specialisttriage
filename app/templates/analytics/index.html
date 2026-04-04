@@ -2,101 +2,118 @@
 {% block title %}Analytics – ReferralQ{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+
+{# Page header #}
+<div class="rq-page-header">
   <div>
-    <h1 class="h3 mb-0 fw-bold">Analytics</h1>
-    <p class="text-muted mb-0">{{ current_user.specialty }} &mdash; {{ current_user.clinic_name or 'BC' }}</p>
+    <h1 class="fw-bold">Analytics</h1>
+    <div class="rq-page-context">{{ current_user.specialty }} &mdash; {{ current_user.clinic_name or 'BC' }}</div>
   </div>
-  <div class="btn-group" id="dateRange">
-    <button class="btn btn-sm btn-outline-secondary" data-days="7">7d</button>
-    <button class="btn btn-sm btn-outline-secondary active" data-days="30">30d</button>
-    <button class="btn btn-sm btn-outline-secondary" data-days="90">90d</button>
-    <button class="btn btn-sm btn-outline-secondary" data-days="0">All</button>
+  <div class="rq-date-range-wrapper">
+    <span class="rq-active-range-label" id="activeRangeLabel"></span>
+    <div class="btn-group" id="dateRange">
+      <button class="btn btn-sm btn-outline-secondary" data-days="7">7d</button>
+      <button class="btn btn-sm btn-outline-secondary active" data-days="30">30d</button>
+      <button class="btn btn-sm btn-outline-secondary" data-days="90">90d</button>
+      <button class="btn btn-sm btn-outline-secondary" data-days="0">All</button>
+      <button class="btn btn-sm btn-outline-secondary" data-range="mtd">MTD</button>
+      <button class="btn btn-sm btn-outline-secondary" data-range="ytd">YTD</button>
+      <button class="btn btn-sm btn-outline-secondary" data-range="custom" id="btnCustomRange">Custom</button>
+    </div>
+    <div class="rq-custom-range-dropdown" id="customRangeDropdown">
+      <label for="customStart">Start date</label>
+      <input type="date" id="customStart">
+      <label for="customEnd">End date</label>
+      <input type="date" id="customEnd">
+      <div class="rq-range-actions">
+        <button class="btn btn-sm btn-outline-secondary" id="btnCancelRange">Cancel</button>
+        <button class="btn btn-sm btn-primary" id="btnApplyRange">Apply</button>
+      </div>
+    </div>
   </div>
 </div>
 
-{# Summary cards #}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 bg-light h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold" id="statTotal">--</div>
-        <div class="text-muted small">Total Referrals</div>
-      </div>
-    </div>
+{# Stat strip #}
+<div class="rq-stat-strip">
+  <div class="rq-stat">
+    <div class="rq-stat-value" id="statTotal">--</div>
+    <div class="rq-stat-label">Total Referrals</div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 bg-info bg-opacity-10 h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-info" id="statCompleteness">--</div>
-        <div class="text-muted small">Avg Completeness</div>
-      </div>
-    </div>
+  <div class="rq-stat rq-stat--info">
+    <div class="rq-stat-value" id="statCompleteness">--</div>
+    <div class="rq-stat-label">Avg Completeness</div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 bg-warning bg-opacity-10 h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-warning" id="statTurnaround">--</div>
-        <div class="text-muted small">Avg Turnaround (hrs)</div>
-      </div>
-    </div>
+  <div class="rq-stat rq-stat--warning">
+    <div class="rq-stat-value" id="statTurnaround">--</div>
+    <div class="rq-stat-label">Avg Turnaround (hrs)</div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 bg-success bg-opacity-10 h-100">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-success" id="statAcceptance">--</div>
-        <div class="text-muted small">Acceptance Rate</div>
-      </div>
-    </div>
+  <div class="rq-stat rq-stat--success">
+    <div class="rq-stat-value" id="statAcceptance">--</div>
+    <div class="rq-stat-label">Acceptance Rate</div>
   </div>
 </div>
 
 {# Charts row 1 #}
-<div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-white"><h6 class="mb-0">Referral Volume</h6></div>
-      <div class="card-body"><canvas id="volumeChart"></canvas></div>
+<div class="rq-analytics-chart-grid">
+  <div class="rq-analytics-chart-card">
+    <div class="rq-analytics-chart-header">
+      <span class="rq-label">Referral Volume</span>
+    </div>
+    <div class="rq-analytics-chart-body">
+      <canvas id="volumeChart"></canvas>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-white"><h6 class="mb-0">Category Distribution</h6></div>
-      <div class="card-body"><canvas id="categoryChart"></canvas></div>
+  <div class="rq-analytics-chart-card">
+    <div class="rq-analytics-chart-header">
+      <span class="rq-label">Category Distribution</span>
+    </div>
+    <div class="rq-analytics-chart-body">
+      <canvas id="categoryChart"></canvas>
     </div>
   </div>
 </div>
 
 {# Charts row 2 #}
-<div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-white"><h6 class="mb-0">Completeness Trend</h6></div>
-      <div class="card-body"><canvas id="completenessChart"></canvas></div>
+<div class="rq-analytics-chart-grid">
+  <div class="rq-analytics-chart-card">
+    <div class="rq-analytics-chart-header">
+      <span class="rq-label">Completeness Trend</span>
+    </div>
+    <div class="rq-analytics-chart-body">
+      <canvas id="completenessChart"></canvas>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-white"><h6 class="mb-0">Outcomes</h6></div>
-      <div class="card-body"><canvas id="outcomeChart"></canvas></div>
+  <div class="rq-analytics-chart-card">
+    <div class="rq-analytics-chart-header">
+      <span class="rq-label">Outcomes</span>
+    </div>
+    <div class="rq-analytics-chart-body">
+      <canvas id="outcomeChart"></canvas>
     </div>
   </div>
 </div>
 
 {# Referring physicians table #}
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-white"><h6 class="mb-0">Top Referring Physicians</h6></div>
+<div class="rq-analytics-table-card">
+  <div class="rq-analytics-chart-header">
+    <span class="rq-label">Top Referring Physicians</span>
+  </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead class="table-light">
-        <tr><th>Physician</th><th>Volume</th><th>Avg Completeness</th></tr>
+      <thead>
+        <tr>
+          <th class="rq-analytics-th">Physician</th>
+          <th class="rq-analytics-th">Volume</th>
+          <th class="rq-analytics-th">Avg Completeness</th>
+        </tr>
       </thead>
       <tbody id="physTable">
-        <tr><td colspan="3" class="text-muted text-center">Loading...</td></tr>
+        <tr><td colspan="3" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">Loading...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -112,10 +129,37 @@ const catLabels = {
   incontinence: 'Incontinence', uti_recurrent: 'UTI',
   erectile_dysfunction: 'ED', other: 'Other', null: 'Unclassified'
 };
-const outcomeColors = {accepted:'#4caf50', declined:'#f44336', needs_info:'#ff9800', redirected:'#9e9e9e'};
+const outcomeColors = {accepted:'#198754', declined:'#C62828', needs_info:'#D4930D', redirected:'#9e9e9e'};
+
+const chartFont = {family: "'Plus Jakarta Sans', system-ui, sans-serif", size: 12};
+const chartGridColor = '#E9ECEF';
+const chartBorderColor = '#DEE2E6';
+
+Chart.defaults.font.family = chartFont.family;
+Chart.defaults.font.size = chartFont.size;
+Chart.defaults.color = '#6C757D';
 
 let charts = {};
 let currentDays = 30;
+let customStartDate = null;
+let customEndDate = null;
+let useCustomRange = false;
+
+function buildQueryString() {
+  if (useCustomRange && customStartDate && customEndDate) {
+    return `start_date=${customStartDate}&end_date=${customEndDate}`;
+  }
+  return `days=${currentDays}`;
+}
+
+function updateRangeLabel() {
+  const label = document.getElementById('activeRangeLabel');
+  if (useCustomRange && customStartDate && customEndDate) {
+    label.textContent = `${customStartDate} to ${customEndDate}`;
+  } else {
+    label.textContent = '';
+  }
+}
 
 async function fetchJSON(url) {
   const r = await fetch(url);
@@ -123,14 +167,15 @@ async function fetchJSON(url) {
 }
 
 async function loadAll() {
-  const d = currentDays;
+  const qs = buildQueryString();
+  updateRangeLabel();
   const [summary, volume, categories, completeness, outcomes, physicians] = await Promise.all([
-    fetchJSON(`/api/analytics/summary?days=${d}`),
-    fetchJSON(`/api/analytics/volume?days=${d}`),
-    fetchJSON(`/api/analytics/categories?days=${d}`),
-    fetchJSON(`/api/analytics/completeness?days=${d}`),
-    fetchJSON(`/api/analytics/outcomes?days=${d}`),
-    fetchJSON(`/api/analytics/referring-physicians?days=${d}`),
+    fetchJSON(`/api/analytics/summary?${qs}`),
+    fetchJSON(`/api/analytics/volume?${qs}`),
+    fetchJSON(`/api/analytics/categories?${qs}`),
+    fetchJSON(`/api/analytics/completeness?${qs}`),
+    fetchJSON(`/api/analytics/outcomes?${qs}`),
+    fetchJSON(`/api/analytics/referring-physicians?${qs}`),
   ]);
 
   // Summary cards
@@ -146,9 +191,9 @@ async function loadAll() {
     data: {
       labels: volume.data.map(d => d.date),
       datasets: [{label: 'Referrals', data: volume.data.map(d => d.count),
-        borderColor: '#1976d2', backgroundColor: '#1976d220', fill: true, tension: 0.3}]
+        borderColor: '#1B6B93', backgroundColor: 'rgba(27, 107, 147, 0.08)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#1B6B93'}]
     },
-    options: {plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true}}}
+    options: {plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
   });
 
   // Category chart
@@ -158,9 +203,9 @@ async function loadAll() {
     data: {
       labels: categories.data.map(d => catLabels[d.category] || d.category),
       datasets: [{data: categories.data.map(d => d.count),
-        backgroundColor: categories.data.map(d => catColors[d.category] || '#bdbdbd')}]
+        backgroundColor: categories.data.map(d => catColors[d.category] || '#bdbdbd'), borderWidth: 1, borderColor: '#fff'}]
     },
-    options: {plugins: {legend: {position: 'right'}}}
+    options: {plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
   });
 
   // Completeness trend
@@ -170,9 +215,9 @@ async function loadAll() {
     data: {
       labels: completeness.data.map(d => d.date),
       datasets: [{label: 'Avg Completeness %', data: completeness.data.map(d => d.avg),
-        borderColor: '#00796b', backgroundColor: '#00796b20', fill: true, tension: 0.3}]
+        borderColor: '#00796B', backgroundColor: 'rgba(0, 121, 107, 0.08)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#00796B'}]
     },
-    options: {plugins: {legend: {display: false}}, scales: {y: {min: 0, max: 100}}}
+    options: {plugins: {legend: {display: false}}, scales: {y: {min: 0, max: 100, grid: {color: chartGridColor}, border: {color: chartBorderColor}}, x: {grid: {display: false}, border: {color: chartBorderColor}}}}
   });
 
   // Outcome chart
@@ -182,21 +227,21 @@ async function loadAll() {
     data: {
       labels: outcomes.data.map(d => d.status.charAt(0).toUpperCase() + d.status.slice(1)),
       datasets: [{data: outcomes.data.map(d => d.count),
-        backgroundColor: outcomes.data.map(d => outcomeColors[d.status] || '#bdbdbd')}]
+        backgroundColor: outcomes.data.map(d => outcomeColors[d.status] || '#bdbdbd'), borderWidth: 1, borderColor: '#fff'}]
     },
-    options: {plugins: {legend: {position: 'right'}}}
+    options: {plugins: {legend: {position: 'right', labels: {usePointStyle: true, pointStyle: 'rect', padding: 12, font: {size: 11}}}}}
   });
 
   // Physicians table
   const tbody = document.getElementById('physTable');
   if (physicians.data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="color: var(--rq-text-muted); padding: var(--rq-space-lg);">No data</td></tr>';
   } else {
     tbody.innerHTML = physicians.data.map(p => `
       <tr>
-        <td>${p.name}</td>
-        <td>${p.volume}</td>
-        <td>${p.avg_completeness !== null ? p.avg_completeness + '%' : '—'}</td>
+        <td class="rq-analytics-td">${p.name}</td>
+        <td class="rq-analytics-td rq-tabular">${p.volume}</td>
+        <td class="rq-analytics-td rq-tabular">${p.avg_completeness !== null ? p.avg_completeness + '%' : '—'}</td>
       </tr>
     `).join('');
   }
@@ -204,11 +249,87 @@ async function loadAll() {
 
 // Date range buttons
 document.getElementById('dateRange').addEventListener('click', e => {
-  if (e.target.dataset.days === undefined) return;
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+
+  const dropdown = document.getElementById('customRangeDropdown');
+
+  // Handle days-based buttons (7d, 30d, 90d, All)
+  if (btn.dataset.days !== undefined) {
+    document.querySelectorAll('#dateRange .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays = parseInt(btn.dataset.days);
+    useCustomRange = false;
+    dropdown.classList.remove('show');
+    loadAll();
+    return;
+  }
+
+  // Handle MTD
+  if (btn.dataset.range === 'mtd') {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const diffDays = Math.ceil((now - startOfMonth) / (1000 * 60 * 60 * 24));
+    document.querySelectorAll('#dateRange .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays = diffDays || 1;
+    useCustomRange = false;
+    dropdown.classList.remove('show');
+    loadAll();
+    return;
+  }
+
+  // Handle YTD
+  if (btn.dataset.range === 'ytd') {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const diffDays = Math.ceil((now - startOfYear) / (1000 * 60 * 60 * 24));
+    document.querySelectorAll('#dateRange .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays = diffDays || 1;
+    useCustomRange = false;
+    dropdown.classList.remove('show');
+    loadAll();
+    return;
+  }
+
+  // Handle Custom toggle
+  if (btn.dataset.range === 'custom') {
+    dropdown.classList.toggle('show');
+    return;
+  }
+});
+
+// Custom range: Apply
+document.getElementById('btnApplyRange').addEventListener('click', () => {
+  const start = document.getElementById('customStart').value;
+  const end = document.getElementById('customEnd').value;
+  if (!start || !end) return;
+  if (start >= end) {
+    alert('Start date must be before end date.');
+    return;
+  }
+  customStartDate = start;
+  customEndDate = end;
+  useCustomRange = true;
   document.querySelectorAll('#dateRange .btn').forEach(b => b.classList.remove('active'));
-  e.target.classList.add('active');
-  currentDays = parseInt(e.target.dataset.days);
+  document.getElementById('btnCustomRange').classList.add('active');
+  document.getElementById('customRangeDropdown').classList.remove('show');
   loadAll();
+});
+
+// Custom range: Cancel
+document.getElementById('btnCancelRange').addEventListener('click', () => {
+  document.getElementById('customRangeDropdown').classList.remove('show');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('customRangeDropdown');
+  const wrapper = document.querySelector('.rq-date-range-wrapper');
+  if (!wrapper.contains(e.target)) {
+    dropdown.classList.remove('show');
+  }
 });
 
 loadAll();

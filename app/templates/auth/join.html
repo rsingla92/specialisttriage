@@ -2,48 +2,130 @@
 {% block title %}Join {{ clinic.name }} — ReferralQ{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow-sm mt-5">
-      <div class="card-body p-4">
-        <h2 class="card-title text-center mb-1 fw-bold" style="color: #1B6B93;">
-          <i class="bi bi-clipboard2-pulse-fill me-2"></i>ReferralQ
-        </h2>
-        <p class="text-center text-muted small mb-4">
-          Join <strong>{{ clinic.name }}</strong>
-        </p>
-
-        <form method="post" novalidate>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-          <div class="mb-3">
-            <label for="full_name" class="form-label">Your Name</label>
-            <input type="text" class="form-control" id="full_name" name="full_name" required autofocus>
-          </div>
-
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email"
-                   value="{{ membership.invite_email or '' }}" required>
-          </div>
-
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-          </div>
-
-          <div class="mb-3">
-            <label for="confirm_password" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-          </div>
-
-          <button type="submit" class="btn btn-primary w-100"
-                  style="background-color: #1B6B93; border-color: #1B6B93;">
-            <i class="bi bi-box-arrow-in-right me-1"></i>Join Clinic
-          </button>
-        </form>
+<div class="rq-auth-page">
+  <div class="rq-auth-container">
+    <div class="rq-auth-card">
+      <div class="rq-auth-brand">
+        <div class="rq-brand-icon">
+          <i class="bi bi-clipboard2-pulse-fill"></i>
+        </div>
+        <span class="rq-brand-name">ReferralQ</span>
       </div>
+      <p class="rq-auth-subtitle">Join <strong>{{ clinic.name }}</strong></p>
+
+      <div class="rq-auth-section-label">Account Details</div>
+
+      <form method="post" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3">
+          <label for="full_name" class="form-label">Your Name</label>
+          <input type="text" class="form-control" id="full_name" name="full_name" required autofocus
+                 placeholder="Dr. First Last">
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input type="email" class="form-control" id="email" name="email"
+                 value="{{ membership.invite_email or '' }}" required
+                 placeholder="you@clinic.ca">
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="password" name="password" required>
+            <button class="btn rq-pwd-toggle" type="button" tabindex="-1" aria-label="Toggle password visibility">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="rq-pwd-requirements" id="pwd-requirements">
+            <div class="rq-pwd-req-item" data-req="length"><i class="bi bi-circle"></i> At least 8 characters</div>
+            <div class="rq-pwd-req-item" data-req="upper"><i class="bi bi-circle"></i> At least 1 uppercase letter</div>
+            <div class="rq-pwd-req-item" data-req="number"><i class="bi bi-circle"></i> At least 1 number</div>
+            <div class="rq-pwd-req-item" data-req="special"><i class="bi bi-circle"></i> At least 1 special character</div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="confirm_password" class="form-label">Confirm Password</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+            <button class="btn rq-pwd-toggle" type="button" tabindex="-1" aria-label="Toggle password visibility">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="rq-pwd-match" id="pwd-match"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+          Join Clinic
+        </button>
+      </form>
+
+      <hr class="rq-auth-divider">
+      <p class="rq-auth-footer">
+        Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
+      </p>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var pwd = document.getElementById('password');
+  var confirm = document.getElementById('confirm_password');
+  var reqs = document.getElementById('pwd-requirements');
+  var match = document.getElementById('pwd-match');
+
+  var rules = {
+    length: function(v) { return v.length >= 8; },
+    upper:  function(v) { return /[A-Z]/.test(v); },
+    number: function(v) { return /\d/.test(v); },
+    special: function(v) { return /[!@#$%^&*(),.?\":{}|<>]/.test(v); }
+  };
+
+  pwd.addEventListener('input', function() {
+    var v = pwd.value;
+    var items = reqs.querySelectorAll('.rq-pwd-req-item');
+    items.forEach(function(item) {
+      var key = item.getAttribute('data-req');
+      var met = rules[key](v);
+      item.querySelector('i').className = met ? 'bi bi-check-circle-fill' : 'bi bi-circle';
+      if (met) { item.classList.add('rq-pwd-req-met'); } else { item.classList.remove('rq-pwd-req-met'); }
+    });
+    updateMatch();
+  });
+
+  confirm.addEventListener('input', updateMatch);
+
+  function updateMatch() {
+    if (!confirm.value) { match.style.display = 'none'; return; }
+    match.style.display = 'block';
+    if (pwd.value === confirm.value) {
+      match.textContent = 'Passwords match';
+      match.style.color = 'var(--rq-success)';
+    } else {
+      match.textContent = 'Passwords do not match';
+      match.style.color = 'var(--rq-error)';
+    }
+  }
+
+  document.querySelectorAll('.rq-pwd-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var input = btn.closest('.input-group').querySelector('input');
+      var icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

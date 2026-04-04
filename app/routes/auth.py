@@ -8,6 +8,20 @@ from app import db
 from app.models import User, Specialty, Clinic, ClinicMembership
 
 
+def _validate_password(password: str) -> list[str]:
+    """Return a list of unmet password requirements."""
+    errors = []
+    if len(password) < 8:
+        errors.append("at least 8 characters")
+    if not re.search(r'[A-Z]', password):
+        errors.append("at least 1 uppercase letter")
+    if not re.search(r'\d', password):
+        errors.append("at least 1 number")
+    if not re.search(r'[!@#$%^&*(),.?\":{}|<>]', password):
+        errors.append("at least 1 special character")
+    return errors
+
+
 def _is_safe_redirect_url(target: str) -> bool:
     """Return True only when *target* is a relative path on the same host."""
     ref_url = urlparse(request.host_url)
@@ -71,8 +85,8 @@ def register():
             flash("All fields are required.", "danger")
         elif password != confirm:
             flash("Passwords do not match.", "danger")
-        elif len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
+        elif (pw_errors := _validate_password(password)):
+            flash("Password must contain: " + ", ".join(pw_errors) + ".", "danger")
         elif User.query.filter_by(email=email).first():
             flash("An account with that email already exists.", "danger")
         else:
@@ -122,8 +136,8 @@ def signup():
             flash("All fields are required.", "danger")
         elif password != confirm:
             flash("Passwords do not match.", "danger")
-        elif len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
+        elif (pw_errors := _validate_password(password)):
+            flash("Password must contain: " + ", ".join(pw_errors) + ".", "danger")
         elif User.query.filter_by(email=email).first():
             flash("An account with that email already exists.", "danger")
         else:
@@ -200,8 +214,8 @@ def join(token):
             flash("All fields are required.", "danger")
         elif password != confirm:
             flash("Passwords do not match.", "danger")
-        elif len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
+        elif (pw_errors := _validate_password(password)):
+            flash("Password must contain: " + ", ".join(pw_errors) + ".", "danger")
         elif User.query.filter_by(email=email).first():
             flash("An account with that email already exists.", "danger")
         else:
