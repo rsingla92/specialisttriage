@@ -6,9 +6,48 @@ An exploratory prototype for triaging specialist referrals in the Canadian healt
 
 This is a research prototype, not a live product. It has not been deployed to a real clinic and has not processed a real patient referral. Everything described below runs on seeded, synthetic data.
 
-![Specialist dashboard: category-filtered referral queue with priority badges and completeness bars](docs/screenshots/04-dashboard.png)
+![Specialist dashboard: category-filtered referral queue with priority badges and completeness bars](docs/screenshots/hero-dashboard.png)
 
-## How it works
+## Table of contents
+
+- [Current state](#current-state)
+- [How this project came about](#how-this-project-came-about)
+- [What this project is](#what-this-project-is)
+- [Architecture](#architecture)
+- [Why it is designed this way](#why-it-is-designed-this-way)
+- [Why the results look the way they do](#why-the-results-look-the-way-they-do)
+- [Screenshots](#screenshots)
+- [Running it](#running-it)
+- [Configuration](#configuration)
+- [Test suite](#test-suite)
+- [Installation](#installation)
+- [How I built this, and what I learned](#how-i-built-this-and-what-i-learned)
+- [Read these files first](#read-these-files-first)
+
+## Current state
+
+<details>
+<summary><strong>7 features built, 146 tests passing, no real-world use yet</strong> (click to expand)</summary>
+
+**Built:** a rule-based triage engine (appropriateness/completeness/urgency scoring) with a Claude Haiku fallback; DB-backed clinical rules for Urology, Gastroenterology, and Orthopedics; a specialist dashboard with category queues, inline review, and batch actions; public no-login pre-referral pathway pages; an analytics dashboard; multi-user clinic management; and a mock OceanMD e-referral client.
+
+**Verified:** 146 tests passing, `mypy` and `ruff` both clean. No CI enforces this yet, it's checked locally.
+
+**Not yet verified:** no real clinic or physician has used this on a live referral, all data is synthetic. The live OceanMD API path is untested. Urology's rules are grounded in BC's [GPAC](https://www2.gov.bc.ca/gov/content/health/practitioner-professional-resources/bc-guidelines) guidelines; Gastroenterology and Orthopedics are drafts with less clinical review. The LLM fallback has no accuracy evaluation against ground truth.
+
+</details>
+
+## How this project came about
+
+I'm a physician who works directly with specialists, including urologists, and I've seen how much of a referral triage backlog comes down to incomplete information rather than clinical complexity: a referral sits in a queue because it's missing a PSA value or a urinalysis, not because the specialist can't make a decision. I wanted to know whether a rule-based scoring system, informed by the same guidelines (GPAC) that specialists already use to decide what's appropriate, could flag that gap automatically and tell the referring physician exactly what's missing before the referral ever reaches a human queue. That question is what this prototype tests.
+
+## What this project is
+
+A Flask application that ingests referrals (from OceanMD or a local mock), runs them through a rule-based triage engine, and produces an appropriateness score, a completeness score, an urgency score, and a list of specifically missing information. Specialists see the scored referrals in a dashboard with category filters and batch actions. Family physicians get a public, no-login pathway page per condition that tells them what workup to complete before referring at all.
+
+Referrals that don't match any keyword rule (roughly 10-20% in testing) fall back to a Claude Haiku classification call rather than defaulting to "other." The clinical rules themselves (keywords, required fields, workup items, pathway text) live in the database and are editable from an admin UI, not hardcoded, so a specialist can tune them without a code change.
+
+## Architecture
 
 ```
                                    ┌──────────────────────┐
@@ -46,49 +85,6 @@ This is a research prototype, not a live product. It has not been deployed to a 
         │  batch actions, analytics  │   │  for family physicians        │
         └───────────────────────────┘   └──────────────────────────────┘
 ```
-
-## Table of contents
-
-- [Current state](#current-state)
-- [How this project came about](#how-this-project-came-about)
-- [What this project is](#what-this-project-is)
-- [Why it is designed this way](#why-it-is-designed-this-way)
-- [Why the results look the way they do](#why-the-results-look-the-way-they-do)
-- [Screenshots](#screenshots)
-- [Running it](#running-it)
-- [Configuration](#configuration)
-- [Test suite](#test-suite)
-- [Installation](#installation)
-- [How I built this, and what I learned](#how-i-built-this-and-what-i-learned)
-- [Read these files first](#read-these-files-first)
-
-## Current state
-
-**What is built**
-- Rule-based triage engine: appropriateness, completeness, and urgency scoring, with a Claude Haiku fallback for referrals that don't match any keyword rule.
-- DB-backed clinical rules for three specialties (Urology, Gastroenterology, Orthopedics), editable from an admin UI (keywords, required workup, pathway guidance).
-- Specialist dashboard: category-grouped queue, inline quick review, batch actions, completeness tracking.
-- Public, no-login pre-referral pathway pages for family physicians.
-- Analytics dashboard: referral volume trends, completeness scores, turnaround time, outcome rates.
-- Multi-user clinic management with shared queues and role-based access.
-- Mock OceanMD e-referral client for local development and tests.
-
-**Current results**
-- 146 tests passing, `mypy` and `ruff` both clean as of this writing.
-- No CI pipeline; the above is verified locally, not enforced on push.
-- No real-world usage. All referrals used for development and testing are synthetic (seeded demo data or the built-in OceanMD mock fixtures), not real patient data.
-- The live OceanMD API integration path exists in code but has never been run against the real OceanMD service.
-- Urology's scoring keywords and required fields are grounded in BC's [GPAC](https://www2.gov.bc.ca/gov/content/health/practitioner-professional-resources/bc-guidelines) guidelines. Orthopedics' rule set is explicitly marked in the seed data as a draft from general Canadian guidelines; it and Gastroenterology have not had the same level of clinical review as Urology.
-
-## How this project came about
-
-I'm a physician who works directly with specialists, including urologists, and I've seen how much of a referral triage backlog comes down to incomplete information rather than clinical complexity: a referral sits in a queue because it's missing a PSA value or a urinalysis, not because the specialist can't make a decision. I wanted to know whether a rule-based scoring system, informed by the same guidelines (GPAC) that specialists already use to decide what's appropriate, could flag that gap automatically and tell the referring physician exactly what's missing before the referral ever reaches a human queue. That question is what this prototype tests.
-
-## What this project is
-
-A Flask application that ingests referrals (from OceanMD or a local mock), runs them through a rule-based triage engine, and produces an appropriateness score, a completeness score, an urgency score, and a list of specifically missing information. Specialists see the scored referrals in a dashboard with category filters and batch actions. Family physicians get a public, no-login pathway page per condition that tells them what workup to complete before referring at all.
-
-Referrals that don't match any keyword rule (roughly 10-20% in testing) fall back to a Claude Haiku classification call rather than defaulting to "other." The clinical rules themselves (keywords, required fields, workup items, pathway text) live in the database and are editable from an admin UI, not hardcoded, so a specialist can tune them without a code change.
 
 ## Why it is designed this way
 
