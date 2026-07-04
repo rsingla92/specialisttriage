@@ -6,6 +6,8 @@ An exploratory prototype for triaging specialist referrals in the Canadian healt
 
 This is a research prototype, not a live product. It has not been deployed to a real clinic and has not processed a real patient referral. Everything described below runs on seeded, synthetic data.
 
+![Specialist dashboard: category-filtered referral queue with priority badges and completeness bars](docs/screenshots/04-dashboard.png)
+
 ## How it works
 
 ```
@@ -110,15 +112,6 @@ Recommended priority (`routine`, `soon`, `urgent`) is derived from urgency keywo
 <summary><strong>Landing page: trust signals and CTA for specialist physicians</strong></summary>
 
 ![Landing](docs/screenshots/01-landing.png)
-
-</details>
-
-<details>
-<summary><strong>Referral queue: category-filtered table, 80 demo referrals across 7 urology categories</strong></summary>
-
-Sortable columns, priority badges, completeness bars, and assigned-to tracking.
-
-![Dashboard](docs/screenshots/04-dashboard.png)
 
 </details>
 
