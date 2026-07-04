@@ -1,91 +1,203 @@
 # ReferralQ
 
-> **Specialist referral triage for Canadian physicians.** A WhiteCoat Prep product.
+An exploratory prototype for triaging specialist referrals in the Canadian healthcare system, starting with BC urology.
 
-Multi-specialty referral triage SaaS that helps specialist clinics process referrals faster and gives family physicians pre-referral pathway guidance. Built for the Canadian healthcare system, starting with BC.
+**Rohit Singla**, rsingla@ece.ubc.ca, [LinkedIn](https://www.linkedin.com/in/rsingla92/)
 
-## What It Does
+This is a research prototype, not a live product. It has not been deployed to a real clinic and has not processed a real patient referral. Everything described below runs on seeded, synthetic data.
 
-- **Efficiency Dashboard** — Category-grouped referrals with batch actions, completeness tracking, and quick review panel
-- **Pre-Referral Pathways** — Public, condition-specific workup checklists for family physicians (no login required)
-- **Multi-Specialty Support** — Urology, Gastroenterology, and Orthopedics with DB-backed clinical rules
-- **Analytics** — Referral volume trends, completeness scores, turnaround time, outcome rates
-- **Clinic Management** — Multi-user clinics with shared referral queues, team management, and role-based access
-- **LLM Classification** — Claude Haiku fallback for referrals that don't match keyword rules
-- **Editable Rules** — Specialists customize workup requirements, classification keywords, and pathway guidance
+## How it works
 
-## Tech Stack
+```
+                                   ┌──────────────────────┐
+                                   │   Family physician    │
+                                   │  (via OceanMD e-ref)  │
+                                   └───────────┬──────────┘
+                                               │ referral
+                                               ▼
+                              ┌────────────────────────────────┐
+                              │      OceanMD e-referral API      │
+                              │  (mock in dev / untested live)   │
+                              └───────────────┬──────────────────┘
+                                              │ fetch_pending_referrals()
+                                              ▼
+                    ┌──────────────────────────────────────────────────┐
+                    │                 Triage engine                     │
+                    │  keyword rules (GPAC-informed) ─┬─ appropriateness │
+                    │                                  ├─ completeness    │
+                    │                                  ├─ urgency         │
+                    │  no keyword match ──────────────►│  Claude Haiku    │
+                    │                                   │  fallback (LLM) │
+                    └───────────────────┬────────────────────────────────┘
+                                        │ TriageResult
+                                        ▼
+        ┌───────────────────────────────────────────────────────────────┐
+        │                         PostgreSQL / SQLite                    │
+        │   Specialty → ClinicalCategory → WorkupItem/Keyword/Priority    │
+        │   Clinic → User → Referral → TriageResult → Feedback           │
+        └──────────────┬───────────────────────────────┬─────────────────┘
+                        │                               │
+                        ▼                               ▼
+        ┌───────────────────────────┐   ┌──────────────────────────────┐
+        │   Specialist dashboard     │   │  Public pre-referral pathway  │
+        │  queue, quick review,      │   │  pages (no login required)    │
+        │  batch actions, analytics  │   │  for family physicians        │
+        └───────────────────────────┘   └──────────────────────────────┘
+```
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.11, Flask 3.1 |
-| Database | SQLite (dev) / PostgreSQL-compatible via SQLAlchemy |
-| Auth | Flask-Login (session-based) |
-| Migrations | Flask-Migrate / Alembic |
-| Frontend | Bootstrap 5, Chart.js, Vanilla JS |
-| Design System | Plus Jakarta Sans, #1B6B93 teal (see DESIGN.md) |
-| External API | OceanMD REST API (mock included for dev/test) |
-| LLM | Anthropic Claude Haiku (optional, for classification fallback) |
+## Table of contents
 
-## Quick Start
+- [Current state](#current-state)
+- [How this project came about](#how-this-project-came-about)
+- [What this project is](#what-this-project-is)
+- [Why it is designed this way](#why-it-is-designed-this-way)
+- [Why the results look the way they do](#why-the-results-look-the-way-they-do)
+- [Screenshots](#screenshots)
+- [Running it](#running-it)
+- [Configuration](#configuration)
+- [Test suite](#test-suite)
+- [Installation](#installation)
+- [How I built this, and what I learned](#how-i-built-this-and-what-i-learned)
+- [Read these files first](#read-these-files-first)
+
+## Current state
+
+**What is built**
+- Rule-based triage engine: appropriateness, completeness, and urgency scoring, with a Claude Haiku fallback for referrals that don't match any keyword rule.
+- DB-backed clinical rules for three specialties (Urology, Gastroenterology, Orthopedics), editable from an admin UI (keywords, required workup, pathway guidance).
+- Specialist dashboard: category-grouped queue, inline quick review, batch actions, completeness tracking.
+- Public, no-login pre-referral pathway pages for family physicians.
+- Analytics dashboard: referral volume trends, completeness scores, turnaround time, outcome rates.
+- Multi-user clinic management with shared queues and role-based access.
+- Mock OceanMD e-referral client for local development and tests.
+
+**Current results**
+- 146 tests passing, `mypy` and `ruff` both clean as of this writing.
+- No CI pipeline; the above is verified locally, not enforced on push.
+- No real-world usage. All referrals used for development and testing are synthetic (seeded demo data or the built-in OceanMD mock fixtures), not real patient data.
+- The live OceanMD API integration path exists in code but has never been run against the real OceanMD service.
+- Urology's scoring keywords and required fields are grounded in BC's [GPAC](https://www2.gov.bc.ca/gov/content/health/practitioner-professional-resources/bc-guidelines) guidelines. Orthopedics' rule set is explicitly marked in the seed data as a draft from general Canadian guidelines; it and Gastroenterology have not had the same level of clinical review as Urology.
+
+## How this project came about
+
+I'm a physician who works directly with specialists, including urologists, and I've seen how much of a referral triage backlog comes down to incomplete information rather than clinical complexity: a referral sits in a queue because it's missing a PSA value or a urinalysis, not because the specialist can't make a decision. I wanted to know whether a rule-based scoring system, informed by the same guidelines (GPAC) that specialists already use to decide what's appropriate, could flag that gap automatically and tell the referring physician exactly what's missing before the referral ever reaches a human queue. That question is what this prototype tests.
+
+## What this project is
+
+A Flask application that ingests referrals (from OceanMD or a local mock), runs them through a rule-based triage engine, and produces an appropriateness score, a completeness score, an urgency score, and a list of specifically missing information. Specialists see the scored referrals in a dashboard with category filters and batch actions. Family physicians get a public, no-login pathway page per condition that tells them what workup to complete before referring at all.
+
+Referrals that don't match any keyword rule (roughly 10-20% in testing) fall back to a Claude Haiku classification call rather than defaulting to "other." The clinical rules themselves (keywords, required fields, workup items, pathway text) live in the database and are editable from an admin UI, not hardcoded, so a specialist can tune them without a code change.
+
+## Why it is designed this way
+
+**Rules first, LLM as fallback, not the reverse.** An LLM call for every referral is unnecessary cost and an unnecessary point of non-determinism for a decision that a keyword match usually resolves correctly and explainably. The engine only calls Claude Haiku when the keyword rules don't produce a category, at roughly $0.01 per call, which keeps the primary decision path auditable: a specialist can see exactly which keyword matched and why a referral scored the way it did.
+
+**Missing information over binary accept/reject.** Early on, an appropriateness score alone told a specialist a referral looked reasonable but not what was missing to act on it (see `_REQUIRED_FIELDS_UROLOGY` and `_STRONGLY_RECOMMENDED_UROLOGY` in `triage_engine.py`). The engine tracks required fields and strongly-recommended investigations separately from the appropriateness score and surfaces them as a `missing_information` list, so the feedback sent back to the referring physician says "add a urinalysis and PSA" instead of just a number.
+
+**Rules live in the database, not in code.** The first version hardcoded Urology's keywords directly in `triage_engine.py`. That doesn't scale to a second specialty without a code deploy every time a specialist wants to add a keyword. Clinical rules (`ClinicalCategory`, `WorkupItem`, `PriorityKeyword`, `PathwayGuidance`) are now DB-backed and editable from `/admin`, with the original hardcoded lists kept only as a fallback for when no DB ruleset exists yet.
+
+**Mock the external dependency, not the internal logic.** `OceanMDService` mocks the OceanMD API surface (`fetch_pending_referrals`, `send_feedback`) behind the same interface used in production, switching to mock mode automatically when `OCEAN_MD_API_KEY` is unset. That let the triage engine, dashboard, and analytics be built and tested end-to-end without ever needing a live OceanMD credential, at the cost of never having verified the real integration.
+
+## Why the results look the way they do
+
+The triage engine outputs three separate 0-100 scores rather than one composite number, because appropriateness, completeness, and urgency answer different questions for different readers. A specialist deciding priority order cares about urgency. A referring physician trying to fix their submission cares about completeness. Collapsing those into one score would hide which one is driving a low result.
+
+Recommended priority (`routine`, `soon`, `urgent`) is derived from urgency keyword hits, not from the composite score, so a referral with a red-flag term like "testicular torsion" is flagged urgent even if other fields are incomplete. Completeness deductions are itemized (`_REQUIRED_FIELD_PENALTY`, `_INVESTIGATION_PENALTY`) rather than a single missing-fields count, so the `missing_information` list can be sent back to the referring physician verbatim.
+
+## Screenshots
+
+<details>
+<summary><strong>Landing page: trust signals and CTA for specialist physicians</strong></summary>
+
+![Landing](docs/screenshots/01-landing.png)
+
+</details>
+
+<details>
+<summary><strong>Referral queue: category-filtered table, 80 demo referrals across 7 urology categories</strong></summary>
+
+Sortable columns, priority badges, completeness bars, and assigned-to tracking.
+
+![Dashboard](docs/screenshots/04-dashboard.png)
+
+</details>
+
+<details>
+<summary><strong>Inline quick review: accept/decline without leaving the table</strong></summary>
+
+Click a row to expand patient details and triage scores; act via AJAX with no page navigation.
+
+![Inline Review](docs/screenshots/05-inline-review.png)
+
+</details>
+
+<details>
+<summary><strong>Referral detail: full clinical view with triage assessment panel</strong></summary>
+
+Patient demographics, referring physician info, clinical notes, and missing-workup detection.
+
+![Referral Detail](docs/screenshots/06-referral-detail.png)
+
+</details>
+
+<details>
+<summary><strong>Feedback form: auto-populated from the triage result</strong></summary>
+
+Decision pre-selected, message pre-filled from category-specific templates, recommended workup pulled from missing information.
+
+![Feedback Form](docs/screenshots/07-feedback-form.png)
+
+</details>
+
+<details>
+<summary><strong>Analytics: volume trends, completeness, and outcomes</strong></summary>
+
+Time frame picker (MTD/YTD/custom range), top referring physicians by clinic and specialty.
+
+![Analytics](docs/screenshots/08-analytics.png)
+
+</details>
+
+<details>
+<summary><strong>Pre-referral pathways: public, no-login workup checklists for family physicians</strong></summary>
+
+Condition-specific, grouped by specialty, based on GPAC guidelines where available.
+
+![Pathways](docs/screenshots/09-pathways.png)
+
+</details>
+
+The full set (12 screenshots, including admin rules, settings, and mobile layout) is in [`docs/screenshots/`](docs/screenshots/README.md).
+
+## Running it
+
+**Interactive (local dev server)**
 
 ```bash
-# 1. Clone and install
-git clone <repo>
-cd specialisttriage
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Set up the database
 flask --app run.py db upgrade
-
-# 3. Seed data
-flask --app run.py seed-specialty    # 3 specialties with clinical rules
-flask --app run.py seed-demo         # Demo clinic + specialist account
-flask --app run.py seed-templates    # Response templates
-
-# 4. Run the development server
+flask --app run.py seed-specialty   # 3 specialties with clinical rules
+flask --app run.py seed-demo        # demo clinic + specialist account
+flask --app run.py seed-templates   # response templates
 python run.py
 ```
 
-Then open http://127.0.0.1:5000 and log in with the credentials shown by `seed-demo`.
+Then open `http://127.0.0.1:5000` and log in with the credentials printed by `seed-demo`.
 
-## Project Structure
-
-```
-app/
-├── models.py              # SQLAlchemy models (User, Referral, Clinic, Specialty, etc.)
-├── routes/
-│   ├── auth.py            # Login / logout / register / signup / onboarding / invite
-│   ├── dashboard.py       # Main referral dashboard (dual-queue)
-│   ├── referrals.py       # Import, detail, retriage, feedback, batch, claim, panel
-│   ├── pathways.py        # Public FP pre-referral pathway pages
-│   ├── analytics.py       # Analytics API + dashboard
-│   ├── admin.py           # Clinical rules management
-│   ├── clinic.py          # Clinic team + settings management
-│   ├── templates.py       # Response template CRUD
-│   └── api.py             # JSON REST API
-├── services/
-│   ├── triage_engine.py   # Rule-based triage scoring (DB-backed + hardcoded fallback)
-│   ├── llm_classifier.py  # Claude Haiku classification fallback
-│   ├── ocean_md.py        # OceanMD API client + mock data
-│   └── specialty_seeder.py # Seed specialties from guidelines
-├── templates/             # Jinja2 / Bootstrap 5 HTML
-└── static/                # CSS (design system) + JS
-tests/
-├── test_triage_engine.py  # 45 tests: classification, workup, scoring, LLM, ruleset
-├── test_ocean_md.py       # 12 tests: mock mode, live API parsing
-├── test_routes.py         # 68 tests: auth, dashboard, batch, clinic, analytics, pathways
-└── test_fixes.py          # 21 tests: regression tests for QA-discovered bugs
-```
-
-## Running Tests
+**Automated (tests)**
 
 ```bash
 python -m pytest -v
 ```
 
-146 tests covering triage engine, OceanMD service, all routes, clinic management, analytics, LLM classification, and QA regression tests.
+**Individual tools**
+
+```bash
+flask --app run.py seed-referrals   # load additional mock OceanMD referrals
+mypy .                              # type check
+ruff check .                        # lint
+```
 
 ## Configuration
 
@@ -97,8 +209,47 @@ Copy `.env.example` to `.env` and set:
 | `DATABASE_URL` | SQLAlchemy DB URL (default: SQLite) |
 | `OCEAN_MD_API_KEY` | OceanMD API key (empty = mock mode) |
 | `OCEAN_MD_BASE_URL` | OceanMD API base URL |
-| `ANTHROPIC_API_KEY` | Anthropic API key (optional, for LLM classification fallback) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (optional, enables the Claude Haiku classification fallback) |
 
-## License
+## Test suite
 
-See [LICENSE](LICENSE).
+```bash
+python -m pytest -v
+```
+
+146 tests: `test_triage_engine.py` (45, classification/workup/scoring/LLM/ruleset), `test_ocean_md.py` (12, mock mode and live-API parsing), `test_routes.py` (68, auth/dashboard/batch/clinic/analytics/pathways), `test_fixes.py` (21, regression tests for QA-discovered bugs). No CI is configured; these run locally.
+
+## Installation
+
+```bash
+git clone git@github.com:rsingla92/specialisttriage.git
+cd specialisttriage
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+Python 3.11, Flask 3.1, SQLAlchemy 2.0.
+
+## How I built this, and what I learned
+
+**What I owned**: the clinical logic (which fields are required, which keywords indicate urgency, how completeness should be scored), the decision to separate appropriateness/completeness/urgency instead of one composite score, the choice to make LLM classification a fallback rather than the primary path, and the call on which specialty's rules were mature enough to ship (Urology) versus draft (Orthopedics).
+
+**What AI accelerated**: route and model boilerplate, test generation for the routes and regression suite, the Bootstrap/Chart.js frontend, and refactoring the hardcoded Urology keyword lists into the DB-backed rule system once the schema was decided.
+
+**Lessons learned**:
+- Keyword-rule triage is legible in a way an LLM-only approach isn't: when a referral scores low, `missing_information` points at the exact field, which matters when the output goes back to a referring physician who needs to act on it, not just a probability.
+- Moving clinical rules from hardcoded Python lists to database rows was more work than the triage logic itself. It touched the seed scripts, the admin UI, and every test that had been asserting against the hardcoded constants, and it's the reason a second and third specialty (Gastroenterology, Orthopedics) could be added without touching `triage_engine.py`.
+- Mocking the OceanMD API behind the same interface as the live client let the rest of the system get built and tested quickly, but it also means the live integration is the least-validated part of the codebase. I'd sequence a real API credential and a live-mode integration test earlier next time, rather than after the rest of the application is built.
+- The LLM fallback's JSON output needed explicit validation against the known category slugs (`llm_classifier.py`), not just JSON-parse success, because a syntactically valid response with an invented category slug would otherwise pass silently.
+
+## Read these files first
+
+| File | Why |
+|------|-----|
+| [`app/services/triage_engine.py`](app/services/triage_engine.py) | The scoring logic: keyword weights, required fields, and how appropriateness/completeness/urgency are computed. |
+| [`app/services/ocean_md.py`](app/services/ocean_md.py) | The e-referral integration and its mock fallback. |
+| [`app/services/llm_classifier.py`](app/services/llm_classifier.py) | The Claude Haiku fallback classifier and its response validation. |
+| [`app/services/specialty_seeder.py`](app/services/specialty_seeder.py) | Where each specialty's clinical rules are defined, including the Orthopedics "draft" caveat. |
+| [`app/models.py`](app/models.py) | The schema connecting specialties, clinical rules, clinics, referrals, and triage results. |
+| [`DESIGN.md`](DESIGN.md) | The visual design system (typography, color, spacing) used throughout the frontend. |
