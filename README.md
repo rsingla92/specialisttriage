@@ -39,7 +39,10 @@ This is a research prototype, not a live product. It has not been deployed to a 
 
 ## How this project came about
 
-I'm a physician who works directly with specialists, including urologists, and I've seen how much of a referral triage backlog comes down to incomplete information rather than clinical complexity: a referral sits in a queue because it's missing a PSA value or a urinalysis, not because the specialist can't make a decision. I wanted to know whether a rule-based scoring system, informed by the same guidelines (GPAC) that specialists already use to decide what's appropriate, could flag that gap automatically and tell the referring physician exactly what's missing before the referral ever reaches a human queue. That question is what this prototype tests.
+I'm a physician who works directly with specialists, including urologists, and I've seen how much of a referral triage backlog comes down to incomplete information rather than clinical complexity: a referral sits in a queue because it's missing a PSA value or a urinalysis, not because the specialist can't make a decision. I wanted to know:
+
+- Whether a rule-based scoring system, informed by the same guidelines (GPAC) that specialists already use to decide what's appropriate, could flag that gap automatically and tell the referring physician exactly what's missing before the referral ever reaches a human queue.
+- What was actually possible to build on top of OceanMD, the e-referral platform most BC physicians already use to send referrals. I was curious what its API exposed and whether a triage layer could sit on top of the existing referral flow without asking physicians to change how they refer.
 
 ## What this project is
 
